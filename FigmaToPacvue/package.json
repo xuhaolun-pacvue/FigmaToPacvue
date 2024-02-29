@@ -1,0 +1,29 @@
+{
+  "name": "figma-plugin-vue3",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm run build:ui && pnpm run build:main --minify --tree-shaking=true",
+    "build:main": "esbuild src/worker/code.ts --bundle --target=ES6 --outfile=dist/code.js",
+    "build:ui": "vite build --minify esbuild --emptyOutDir=false",
+    "build:watch": "concurrently \"pnpm run build:main --watch\" \"pnpm run build:ui --watch\"",
+    "dev": "pnpm build:watch",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "esbuild": "^0.20.1",
+    "vue": "^3.4.15"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.86.0",
+    "@highlightjs/vue-plugin": "^2.1.0",
+    "@vitejs/plugin-vue": "^5.0.3",
+    "concurrently": "^8.2.2",
+    "highlight.js": "^11.9.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.0",
+    "vite-plugin-singlefile": "^1.0.0",
+    "vue-tsc": "^1.8.27"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Pacvue Code [Test]",
+  "id": "1336204432582495727",
+  "api": "1.0.0",
+  "main": "code.js",
+  "capabilities": ["inspect", "codegen", "vscode"],
+  "enableProposedApi": false,
+  "editorType": [
+    "figma",
+    "dev"
+  ],
+  "ui": "index.html",
+  "networkAccess": {
+    "allowedDomains": [
+      "none"
+    ]
+  },
+  "codegenLanguages": [
+    { "label": "HTML", "value": "html" },
+    { "label": "React (JSX)", "value": "html_jsx" },
+    { "label": "Tailwind", "value": "tailwind" },
+    { "label": "Tailwind (JSX)", "value": "tailwind_jsx" },
+    { "label": "Flutter", "value": "flutter" },
+    { "label": "SwiftUI", "value": "swiftUI" }
+  ]
+}
