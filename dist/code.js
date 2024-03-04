@@ -2168,8 +2168,14 @@
 <${ary[0]} />`;
         break;
       case "PacvueRadioGroup":
+        comp = `
+<pacvue-radio-group>${node.html}
+</pacvue-radio-group>`;
         break;
-      case "PacvueRadioTab":
+      case "PacvueTab":
+        comp = `
+<PacvueTab tab-position="top">${node.html}
+</PacvueTab>`;
         break;
       case "PacvueIcon":
         if (ary[1] == "PacvueIconTipsExclamation") {
@@ -2327,6 +2333,25 @@
         } else {
           ParentObj.children = childrenList;
         }
+      } else if (node.name.includes("tab")) {
+        ParentObj.type = "PACVUE";
+        let html = "";
+        childrenList.forEach((e) => {
+          const text = getChildrenAllText([e.node], []).join(" ");
+          if (childrenList.some((e2) => {
+            return e2.style.includes("border");
+          })) {
+            ParentObj.name = `PacvueRadioGroup`;
+            html += `
+<pacvue-radio-button >${text}</pacvue-radio-button>`;
+          } else {
+            ParentObj.name = `PacvueTab`;
+            html += `
+<el-tab-pane label="${text}"></el-tab-pane>`;
+          }
+        });
+        ParentObj.html = html;
+        return ParentObj;
       } else if (node.name.includes("\u4E3B\u8981\u6309\u94AE") || node.name.includes("\u6B21\u7EA7\u6309\u94AE") || (node.height == 36 || node.height == 32) && styleClass.includes("border") && styleClass.includes("border-[var(--el-color-primary)]")) {
         ParentObj.type = "PACVUE";
         let icon = "-";
