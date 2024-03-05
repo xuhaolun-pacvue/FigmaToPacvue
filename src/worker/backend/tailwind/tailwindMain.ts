@@ -254,6 +254,18 @@ const tailwindSection = (obj: any, isJsx: boolean): string => {
     return `\n<div${builder.build()}></div>`;
   }
 };
+export const tailwindCodeGenTextStyles = () => {
+  const result = previousExecutionCache
+    .map((style) => `// ${style.text}\n${style.style.split(" ").join("\n")}`)
+    .join("\n---\n");
+
+  if (!result) {
+    return "// No text styles in this selection";
+  }
+
+  return result;
+};
+
 
 /* Pacvue相关 */
 const pacvueButton =  (obj: any, isJsx: boolean): string => {

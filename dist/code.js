@@ -1139,6 +1139,22 @@
     };
   };
 
+  // src/worker/backend/common/parseJSX.ts
+  var formatWithJSX = (property, isJsx, value) => {
+    const jsx_property = property.split("-").map((d, i) => i > 0 ? d.charAt(0).toUpperCase() + d.slice(1) : d).join("");
+    if (typeof value === "number") {
+      if (isJsx) {
+        return `${jsx_property}: ${sliceNum(value)}`;
+      } else {
+        return `${property}: ${sliceNum(value)}px`;
+      }
+    } else if (isJsx) {
+      return `${jsx_property}: '${value}'`;
+    } else {
+      return `${property}: ${value}`;
+    }
+  };
+
   // src/worker/backend/tailwind/builderImpl/tailwindSize.ts
   var tailwindSizePartial = (node, optimizeLayout) => {
     var _a;
@@ -2676,6 +2692,603 @@
 <div${layoutBuilder.build()}>${content}</div>`;
   };
 
+  // src/worker/backend/style/builderImpl/htmlColor.ts
+  var htmlColorFromFills = (fills) => {
+    const fill = retrieveTopFill(fills);
+    if (fill && fill.type === "SOLID") {
+      return htmlColor(fill.color, fill.opacity);
+    }
+    if (fill && (fill.type === "GRADIENT_LINEAR" || fill.type === "GRADIENT_ANGULAR" || fill.type === "GRADIENT_RADIAL" || fill.type === "GRADIENT_DIAMOND")) {
+      if (fill.gradientStops.length > 0) {
+        return htmlColor(
+          fill.gradientStops[0].color,
+          fill.opacity
+        );
+      }
+    }
+    return "";
+  };
+  var htmlColor = (color, alpha = 1) => {
+    if (color.r === 1 && color.g === 1 && color.b === 1 && alpha === 1) {
+      return "white";
+    }
+    if (color.r === 0 && color.g === 0 && color.b === 0 && alpha === 1) {
+      return "black";
+    }
+    if (alpha === 1) {
+      const r2 = Math.round(color.r * 255);
+      const g2 = Math.round(color.g * 255);
+      const b2 = Math.round(color.b * 255);
+      const toHex = (num) => num.toString(16).padStart(2, "0");
+      return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`.toUpperCase();
+    }
+    const r = sliceNum(color.r * 255);
+    const g = sliceNum(color.g * 255);
+    const b = sliceNum(color.b * 255);
+    const a = sliceNum(alpha);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  };
+  var htmlGradientFromFills = (fills) => {
+    const fill = retrieveTopFill(fills);
+    if ((fill == null ? void 0 : fill.type) === "GRADIENT_LINEAR") {
+      return htmlLinearGradient(fill);
+    } else if ((fill == null ? void 0 : fill.type) === "GRADIENT_ANGULAR") {
+      return htmlAngularGradient(fill);
+    } else if ((fill == null ? void 0 : fill.type) === "GRADIENT_RADIAL") {
+      return htmlRadialGradient(fill);
+    }
+    return "";
+  };
+  var gradientAngle2 = (fill) => {
+    const x1 = fill.gradientTransform[0][2];
+    const y1 = fill.gradientTransform[1][2];
+    const x2 = fill.gradientTransform[0][0] + x1;
+    const y2 = fill.gradientTransform[1][0] + y1;
+    const dx = x2 - x1;
+    const dy = y1 - y2;
+    const radians = Math.atan2(dy, dx);
+    const unadjustedAngle = radians * 180 / Math.PI;
+    const adjustedAngle = unadjustedAngle + 90;
+    return adjustedAngle;
+  };
+  var cssGradientAngle = (angle) => {
+    const cssAngle = angle;
+    return cssAngle < 0 ? cssAngle + 360 : cssAngle;
+  };
+  var htmlLinearGradient = (fill) => {
+    const figmaAngle = gradientAngle2(fill);
+    const angle = cssGradientAngle(figmaAngle).toFixed(0);
+    const mappedFill = fill.gradientStops.map((stop) => {
+      var _a;
+      const color = htmlColor(stop.color, stop.color.a * ((_a = fill.opacity) != null ? _a : 1));
+      const position = `${(stop.position * 100).toFixed(0)}%`;
+      return `${color} ${position}`;
+    }).join(", ");
+    return `linear-gradient(${angle}deg, ${mappedFill})`;
+  };
+  var getGradientTransformCoordinates = (gradientTransform) => {
+    const a = gradientTransform[0][0];
+    const b = gradientTransform[0][1];
+    const c = gradientTransform[1][0];
+    const d = gradientTransform[1][1];
+    const e = gradientTransform[0][2];
+    const f = gradientTransform[1][2];
+    const scaleX = Math.sqrt(__pow(a, 2) + __pow(b, 2));
+    const scaleY = Math.sqrt(__pow(c, 2) + __pow(d, 2));
+    const rotationAngle = Math.atan2(b, a);
+    const centerX = (e * scaleX * 100 / (1 - scaleX)).toFixed(2);
+    const centerY = ((1 - f) * scaleY * 100 / (1 - scaleY)).toFixed(2);
+    const radiusX = (scaleX * 100).toFixed(2);
+    const radiusY = (scaleY * 100).toFixed(2);
+    return { centerX, centerY, radiusX, radiusY };
+  };
+  var htmlRadialGradient = (fill) => {
+    const mappedFill = fill.gradientStops.map((stop) => {
+      var _a;
+      const color = htmlColor(stop.color, stop.color.a * ((_a = fill.opacity) != null ? _a : 1));
+      const position = `${(stop.position * 100).toFixed(0)}%`;
+      return `${color} ${position}`;
+    }).join(", ");
+    const { centerX, centerY, radiusX, radiusY } = getGradientTransformCoordinates(fill.gradientTransform);
+    return `radial-gradient(${radiusX}% ${radiusY}% at ${centerX}% ${centerY}%, ${mappedFill})`;
+  };
+  var htmlAngularGradient = (fill) => {
+    const angle = gradientAngle2(fill).toFixed(0);
+    const centerX = (fill.gradientTransform[0][2] * 100).toFixed(2);
+    const centerY = (fill.gradientTransform[1][2] * 100).toFixed(2);
+    const mappedFill = fill.gradientStops.map((stop) => {
+      var _a;
+      const color = htmlColor(stop.color, stop.color.a * ((_a = fill.opacity) != null ? _a : 1));
+      const position = `${(stop.position * 360).toFixed(0)}deg`;
+      return `${color} ${position}`;
+    }).join(", ");
+    return `conic-gradient(from ${angle}deg at ${centerX}% ${centerY}%, ${mappedFill})`;
+  };
+
+  // src/worker/backend/style/builderImpl/htmlShadow.ts
+  var htmlShadow = (node) => {
+    if (node.effects && node.effects.length > 0) {
+      const shadowEffects = node.effects.filter(
+        (d) => (d.type === "DROP_SHADOW" || d.type === "INNER_SHADOW" || d.type === "LAYER_BLUR") && d.visible
+      );
+      if (shadowEffects.length > 0) {
+        const shadow = shadowEffects[0];
+        let x = 0;
+        let y = 0;
+        let blur = 0;
+        let spread = "";
+        let inner = "";
+        let color = "";
+        if (shadow.type === "DROP_SHADOW" || shadow.type === "INNER_SHADOW") {
+          x = shadow.offset.x;
+          y = shadow.offset.y;
+          blur = shadow.radius;
+          spread = shadow.spread ? `${shadow.spread}px ` : "";
+          inner = shadow.type === "INNER_SHADOW" ? " inset" : "";
+          color = htmlColor(shadow.color, shadow.color.a);
+        } else if (shadow.type === "LAYER_BLUR") {
+          x = shadow.radius;
+          y = shadow.radius;
+          blur = shadow.radius;
+        }
+        return `${x}px ${y}px ${blur}px ${spread}${color}${inner}`;
+      }
+    }
+    return "";
+  };
+
+  // src/worker/backend/style/builderImpl/htmlBlend.ts
+  var htmlOpacity = (node, isJsx) => {
+    if (node.opacity !== void 0 && node.opacity !== 1) {
+      if (isJsx) {
+        return `opacity: ${sliceNum(node.opacity)}`;
+      } else {
+        return `opacity: ${sliceNum(node.opacity)}`;
+      }
+    }
+    return "";
+  };
+  var htmlBlendMode = (node, isJsx) => {
+    if (node.blendMode !== "NORMAL" && node.blendMode !== "PASS_THROUGH") {
+      let blendMode = "";
+      switch (node.blendMode) {
+        case "MULTIPLY":
+          blendMode = "multiply";
+          break;
+        case "SCREEN":
+          blendMode = "screen";
+          break;
+        case "OVERLAY":
+          blendMode = "overlay";
+          break;
+        case "DARKEN":
+          blendMode = "darken";
+          break;
+        case "LIGHTEN":
+          blendMode = "lighten";
+          break;
+        case "COLOR_DODGE":
+          blendMode = "color-dodge";
+          break;
+        case "COLOR_BURN":
+          blendMode = "color-burn";
+          break;
+        case "HARD_LIGHT":
+          blendMode = "hard-light";
+          break;
+        case "SOFT_LIGHT":
+          blendMode = "soft-light";
+          break;
+        case "DIFFERENCE":
+          blendMode = "difference";
+          break;
+        case "EXCLUSION":
+          blendMode = "exclusion";
+          break;
+        case "HUE":
+          blendMode = "hue";
+          break;
+        case "SATURATION":
+          blendMode = "saturation";
+          break;
+        case "COLOR":
+          blendMode = "color";
+          break;
+        case "LUMINOSITY":
+          blendMode = "luminosity";
+          break;
+      }
+      if (blendMode) {
+        return formatWithJSX("mix-blend-mode", isJsx, blendMode);
+      }
+    }
+    return "";
+  };
+  var htmlVisibility = (node, isJsx) => {
+    if (node.visible !== void 0 && !node.visible) {
+      return formatWithJSX("visibility", isJsx, "hidden");
+    }
+    return "";
+  };
+  var htmlRotation = (node, isJsx) => {
+    if (node.rotation !== void 0 && Math.round(node.rotation) !== 0) {
+      return [
+        formatWithJSX(
+          "transform",
+          isJsx,
+          `rotate(${sliceNum(-node.rotation)}deg)`
+        ),
+        formatWithJSX("transform-origin", isJsx, "0 0")
+      ];
+    }
+    return [];
+  };
+
+  // src/worker/backend/style/builderImpl/htmlPadding.ts
+  var htmlPadding = (node, isJsx) => {
+    const padding = commonPadding(node);
+    if (padding === null) {
+      return [];
+    }
+    if ("all" in padding) {
+      if (padding.all !== 0) {
+        return [formatWithJSX("padding", isJsx, padding.all)];
+      } else {
+        return [];
+      }
+    }
+    let comp = [];
+    if ("horizontal" in padding) {
+      if (padding.horizontal !== 0) {
+        comp.push(formatWithJSX("padding-left", isJsx, padding.horizontal));
+        comp.push(formatWithJSX("padding-right", isJsx, padding.horizontal));
+      }
+      if (padding.vertical !== 0) {
+        comp.push(formatWithJSX("padding-top", isJsx, padding.vertical));
+        comp.push(formatWithJSX("padding-bottom", isJsx, padding.vertical));
+      }
+      return comp;
+    }
+    if (padding.top !== 0) {
+      comp.push(formatWithJSX("padding-top", isJsx, padding.top));
+    }
+    if (padding.bottom !== 0) {
+      comp.push(formatWithJSX("padding-bottom", isJsx, padding.bottom));
+    }
+    if (padding.left !== 0) {
+      comp.push(formatWithJSX("padding-left", isJsx, padding.left));
+    }
+    if (padding.right !== 0) {
+      comp.push(formatWithJSX("padding-right", isJsx, padding.right));
+    }
+    return comp;
+  };
+
+  // src/worker/backend/style/builderImpl/htmlSize.ts
+  var isPreviewGlobal = false;
+  var htmlSizePartial = (node, isJsx, optimizeLayout) => {
+    var _a;
+    if (isPreviewGlobal && node.parent === void 0) {
+      return {
+        width: formatWithJSX("width", isJsx, "100%"),
+        height: formatWithJSX("height", isJsx, "100%")
+      };
+    }
+    const size = nodeSize(node, optimizeLayout);
+    const nodeParent = (_a = node.parent && optimizeLayout && "inferredAutoLayout" in node.parent ? node.parent.inferredAutoLayout : null) != null ? _a : node.parent;
+    let w = "";
+    if (typeof size.width === "number") {
+      w = formatWithJSX("width", isJsx, size.width);
+    } else if (size.width === "fill") {
+      if (nodeParent && "layoutMode" in nodeParent && nodeParent.layoutMode === "HORIZONTAL") {
+        w = formatWithJSX("flex", isJsx, "1 1 0");
+      } else {
+        w = formatWithJSX("align-self", isJsx, "stretch");
+      }
+    }
+    let h = "";
+    if (typeof size.height === "number") {
+      h = formatWithJSX("height", isJsx, size.height);
+    } else if (typeof size.height === "string") {
+      if (nodeParent && "layoutMode" in nodeParent && nodeParent.layoutMode === "VERTICAL") {
+        h = formatWithJSX("flex", isJsx, "1 1 0");
+      } else {
+        h = formatWithJSX("align-self", isJsx, "stretch");
+      }
+    }
+    return { width: w, height: h };
+  };
+
+  // src/worker/backend/style/builderImpl/htmlBorderRadius.ts
+  var htmlBorderRadius = (node, isJsx) => {
+    const radius = getCommonRadius(node);
+    if (node.type === "ELLIPSE") {
+      return [formatWithJSX("border-radius", isJsx, 9999)];
+    }
+    let comp = [];
+    let cornerValues = [0, 0, 0, 0];
+    let singleCorner = 0;
+    if ("all" in radius) {
+      if (radius.all === 0) {
+        return [];
+      }
+      singleCorner = radius.all;
+      comp.push(formatWithJSX("border-radius", isJsx, radius.all));
+    } else if ("topLeftRadius" in node) {
+      cornerValues = handleIndividualRadius(node);
+      comp.push(
+        ...cornerValues.filter((d) => d > 0).map((value, index) => {
+          const property = [
+            "border-top-left-radius",
+            "border-top-right-radius",
+            "border-bottom-right-radius",
+            "border-bottom-left-radius"
+          ][index];
+          return formatWithJSX(property, isJsx, value);
+        })
+      );
+    }
+    if ("children" in node && "clipsContent" in node && node.children.length > 0 && node.clipsContent === true) {
+      comp.push(formatWithJSX("overflow", isJsx, "hidden"));
+    }
+    return comp;
+  };
+  var handleIndividualRadius = (node) => {
+    const cornerValues = [
+      node.topLeftRadius,
+      node.topRightRadius,
+      node.bottomRightRadius,
+      node.bottomLeftRadius
+    ];
+    return cornerValues;
+  };
+
+  // src/worker/backend/style/htmlDefaultBuilder.ts
+  var HtmlDefaultBuilder = class {
+    constructor(node, showLayerName, optIsJSX) {
+      __publicField(this, "styles");
+      __publicField(this, "isJSX");
+      __publicField(this, "visible");
+      __publicField(this, "name", "");
+      __publicField(this, "addStyles", (...newStyles) => {
+        this.styles.push(...newStyles.filter((style) => style));
+      });
+      this.isJSX = optIsJSX;
+      this.styles = [];
+      this.visible = node.visible;
+      if (showLayerName) {
+        this.name = className(node.name);
+      }
+    }
+    commonPositionStyles(node, optimizeLayout) {
+      this.size(node, optimizeLayout);
+      this.autoLayoutPadding(node, optimizeLayout);
+      this.position(node, optimizeLayout);
+      this.blend(node);
+      return this;
+    }
+    commonShapeStyles(node) {
+      this.applyFillsToStyle(
+        node.fills,
+        node.type === "TEXT" ? "text" : "background"
+      );
+      this.shadow(node);
+      this.border(node);
+      this.blur(node);
+      return this;
+    }
+    blend(node) {
+      this.addStyles(
+        htmlVisibility(node, this.isJSX),
+        ...htmlRotation(node, this.isJSX),
+        htmlOpacity(node, this.isJSX),
+        htmlBlendMode(node, this.isJSX)
+      );
+      return this;
+    }
+    border(node) {
+      this.addStyles(...htmlBorderRadius(node, this.isJSX));
+      const commonBorder = commonStroke(node);
+      if (!commonBorder) {
+        return this;
+      }
+      const color = htmlColorFromFills(node.strokes);
+      const borderStyle = node.dashPattern.length > 0 ? "dotted" : "solid";
+      const consolidateBorders = (border) => [`${sliceNum(border)}px`, color, borderStyle].filter((d) => d).join(" ");
+      if ("all" in commonBorder) {
+        if (commonBorder.all === 0) {
+          return this;
+        }
+        const weight = commonBorder.all;
+        this.addStyles(
+          formatWithJSX("border", this.isJSX, consolidateBorders(weight))
+        );
+      } else {
+        if (commonBorder.left !== 0) {
+          this.addStyles(
+            formatWithJSX(
+              "border-left",
+              this.isJSX,
+              consolidateBorders(commonBorder.left)
+            )
+          );
+        }
+        if (commonBorder.top !== 0) {
+          this.addStyles(
+            formatWithJSX(
+              "border-top",
+              this.isJSX,
+              consolidateBorders(commonBorder.top)
+            )
+          );
+        }
+        if (commonBorder.right !== 0) {
+          this.addStyles(
+            formatWithJSX(
+              "border-right",
+              this.isJSX,
+              consolidateBorders(commonBorder.right)
+            )
+          );
+        }
+        if (commonBorder.bottom !== 0) {
+          this.addStyles(
+            formatWithJSX(
+              "border-bottom",
+              this.isJSX,
+              consolidateBorders(commonBorder.bottom)
+            )
+          );
+        }
+      }
+      return this;
+    }
+    position(node, optimizeLayout) {
+      var _a, _b;
+      if (commonIsAbsolutePosition(node, optimizeLayout)) {
+        const { x, y } = getCommonPositionValue(node);
+        this.addStyles(
+          formatWithJSX("left", this.isJSX, x),
+          formatWithJSX("top", this.isJSX, y),
+          formatWithJSX("position", this.isJSX, "absolute")
+        );
+      } else {
+        if (node.type === "GROUP" || "layoutMode" in node && ((_b = (_a = optimizeLayout ? node.inferredAutoLayout : null) != null ? _a : node) == null ? void 0 : _b.layoutMode) === "NONE") {
+          this.addStyles(formatWithJSX("position", this.isJSX, "relative"));
+        }
+      }
+      return this;
+    }
+    applyFillsToStyle(paintArray, property) {
+      if (property === "text") {
+        this.addStyles(
+          formatWithJSX("text", this.isJSX, htmlColorFromFills(paintArray))
+        );
+        return this;
+      }
+      const backgroundValues = this.buildBackgroundValues(paintArray);
+      if (backgroundValues) {
+        this.addStyles(formatWithJSX("background", this.isJSX, backgroundValues));
+      }
+      return this;
+    }
+    buildBackgroundValues(paintArray) {
+      if (paintArray === figma.mixed) {
+        return "";
+      }
+      if (paintArray.length === 1 && paintArray[0].type === "SOLID") {
+        return htmlColorFromFills(paintArray);
+      }
+      const styles = paintArray.map((paint) => {
+        if (paint.type === "SOLID") {
+          const color = htmlColorFromFills([paint]);
+          return `linear-gradient(0deg, ${color} 0%, ${color} 100%)`;
+        } else if (paint.type === "GRADIENT_LINEAR" || paint.type === "GRADIENT_RADIAL" || paint.type === "GRADIENT_ANGULAR") {
+          return htmlGradientFromFills([paint]);
+        }
+        return "";
+      });
+      return styles.filter((value) => value !== "").join(", ");
+    }
+    shadow(node) {
+      if ("effects" in node) {
+        const shadow = htmlShadow(node);
+        if (shadow) {
+          this.addStyles(
+            formatWithJSX("box-shadow", this.isJSX, htmlShadow(node))
+          );
+        }
+      }
+      return this;
+    }
+    size(node, optimize) {
+      const { width, height } = htmlSizePartial(node, this.isJSX, optimize);
+      if (node.type === "TEXT") {
+        switch (node.textAutoResize) {
+          case "WIDTH_AND_HEIGHT":
+            break;
+          case "HEIGHT":
+            this.addStyles(width);
+            break;
+          case "NONE":
+          case "TRUNCATE":
+            this.addStyles(width, height);
+            break;
+        }
+      } else {
+        this.addStyles(width, height);
+      }
+      return this;
+    }
+    autoLayoutPadding(node, optimizeLayout) {
+      var _a;
+      if ("paddingLeft" in node) {
+        this.addStyles(
+          ...htmlPadding(
+            (_a = optimizeLayout ? node.inferredAutoLayout : null) != null ? _a : node,
+            this.isJSX
+          )
+        );
+      }
+      return this;
+    }
+    blur(node) {
+      if ("effects" in node && node.effects.length > 0) {
+        const blur = node.effects.find(
+          (e) => e.type === "LAYER_BLUR" && e.visible
+        );
+        if (blur) {
+          this.addStyles(
+            formatWithJSX(
+              "filter",
+              this.isJSX,
+              `blur(${sliceNum(blur.radius)}px)`
+            )
+          );
+        }
+        const backgroundBlur = node.effects.find(
+          (e) => e.type === "BACKGROUND_BLUR" && e.visible
+        );
+        if (backgroundBlur) {
+          this.addStyles(
+            formatWithJSX(
+              "backdrop-filter",
+              this.isJSX,
+              `blur(${sliceNum(backgroundBlur.radius)}px)`
+            )
+          );
+        }
+      }
+    }
+    build(additionalStyle = []) {
+      this.addStyles(...additionalStyle);
+      const formattedStyles = this.styles.map((s) => s.trim());
+      let formattedStyle = "";
+      if (this.styles.length > 0) {
+        if (this.isJSX) {
+          formattedStyle = ` style={{${formattedStyles.join(", ")}}}`;
+        } else {
+          formattedStyle = ` style="${formattedStyles.join("; ")}"`;
+        }
+      }
+      if (this.name.length > 0) {
+        const classOrClassName = this.isJSX ? "className" : "class";
+        return ` ${classOrClassName}="${this.name}"${formattedStyle}`;
+      } else {
+        return formattedStyle;
+      }
+    }
+  };
+
+  // src/worker/backend/style/styleMain.ts
+  var styleMain = (sceneNode) => {
+    const visibleSceneNode = sceneNode.filter((d) => d.visible);
+    const node = visibleSceneNode[0];
+    const builder = new HtmlDefaultBuilder(node, false, false).commonPositionStyles(node, true).commonShapeStyles(node);
+    const style = builder.styles.join(";\n");
+    return style;
+  };
+
   // src/worker/backend/code.ts
   var run = (settings) => {
     if (figma.currentPage.selection.length === 0) {
@@ -2688,11 +3301,21 @@
       figma.currentPage.selection,
       null
     );
-    let array = tailwindMain1(convertedSelection, settings);
-    let result1 = tailwindMain(array, settings);
+    let result = "";
+    switch (settings.mode) {
+      case "tailwind":
+        let array = tailwindMain1(convertedSelection, settings);
+        result = tailwindMain(array, settings);
+        break;
+      case "style":
+        result = styleMain(convertedSelection);
+        break;
+      default:
+        break;
+    }
     figma.ui.postMessage({
       type: "code",
-      data: result1,
+      data: result,
       settings,
       htmlPreview: null,
       preferences: settings
@@ -2700,8 +3323,7 @@
   };
   var codegenRun = (selection, settings) => {
     const convertedSelection = convertIntoNodes(selection, null);
-    let array = tailwindMain1(convertedSelection, settings);
-    let result = tailwindMain(array, settings);
+    let result = styleMain(convertedSelection);
     return result;
   };
 
@@ -2716,7 +3338,8 @@
     responsiveRoot: false,
     flutterGenerationMode: "snippet",
     swiftUIGenerationMode: "snippet",
-    roundTailwind: false
+    roundTailwind: false,
+    mode: "tailwind"
   };
   function isKeyOfPluginSettings(key) {
     return key in defaultPluginSettings;
@@ -2762,8 +3385,12 @@
     });
     figma.ui.onmessage = (msg) => {
       console.log("[node] figma.ui.onmessage", msg);
+      if (msg.mode == "tailwind") {
+      } else if (msg.mode == "style") {
+      }
       if (msg.type === "pluginSettingChanged") {
         userPluginSettings[msg.key] = msg.value;
+        console.log(userPluginSettings, msg.key, msg.value);
         figma.clientStorage.setAsync("userPluginSettings", userPluginSettings);
         safeRun(userPluginSettings);
       }

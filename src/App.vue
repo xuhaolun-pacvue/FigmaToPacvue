@@ -1,6 +1,14 @@
 
 <template>
   <div>
+    <div style="display: flex;margin: 8px 0 12px;">
+      <div class="switchbutton" :class="{active: mode == 'tailwind'}" style="border-top-left-radius: 4px; border-bottom-left-radius: 4px;" @click="changeMode('tailwind')">
+        Tailwind CSS + Html
+      </div>
+      <div class="switchbutton" :class="{active: mode == 'style'}" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px;" @click="changeMode('style')">
+        Style
+      </div>
+    </div>
     <div @click="copyText" class="copyButton">复制 Copy</div>
     <highlightjs :code="code"/>
   </div>
@@ -8,6 +16,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 const code = ref(``)
+const mode = ref('tailwind')
 const copyText = ()=>{
   // 创建一个临时的textarea元素
   const tempTextarea = document.createElement('textarea');
@@ -42,10 +51,26 @@ onMounted(()=>{
   }
 
 })
+const changeMode = (type: string)=>{
+  mode.value = type
+  parent.postMessage({ pluginMessage: { type:'pluginSettingChanged', key: 'mode', value: type } }, '*')
+}
 </script>
 
 
 <style>
+.switchbutton{
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px #FF9F43 solid;
+  border-color: #DEDFE3;
+  font-size: 14px;
+  cursor: pointer;
+}
+.switchbutton.active{
+  border-color: #FF9F43;
+  background: #ff9f430d;
+}
 .copyButton{
   padding: 8px 0;
   width: 100%;

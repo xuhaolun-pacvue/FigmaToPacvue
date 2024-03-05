@@ -16,6 +16,7 @@ const defaultPluginSettings: PluginSettings = {
   flutterGenerationMode: "snippet",
   swiftUIGenerationMode: "snippet",
   roundTailwind: false,
+  mode: "tailwind"
 };
 
 // A helper type guard to ensure the key belongs to the PluginSettings type
@@ -78,8 +79,13 @@ const standardMode = async () => {
   });
   figma.ui.onmessage = (msg) => {
     console.log("[node] figma.ui.onmessage", msg);
+    if(msg.mode == 'tailwind'){
+    }else if(msg.mode == 'style'){
+
+    }
     if (msg.type === "pluginSettingChanged") {
       (userPluginSettings as any)[msg.key] = msg.value;
+      console.log(userPluginSettings, msg.key,  msg.value)
       figma.clientStorage.setAsync("userPluginSettings", userPluginSettings);
       safeRun(userPluginSettings);
     }

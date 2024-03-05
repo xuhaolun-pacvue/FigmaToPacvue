@@ -1,7 +1,7 @@
 import { convertIntoNodes } from "./altNodes/altConversion";
 import { tailwindMain } from "./tailwind/tailwindMain";
 import { tailwindMain1 } from "./tailwind/tailwindMain1";
-import { tailwindMain2 } from "./tailwind/tailwindMain2";
+import { styleMain } from "./style/styleMain";
 
 export type FrameworkTypes = "Tailwind";
 
@@ -15,6 +15,7 @@ export type PluginSettings = {
   flutterGenerationMode: string;
   swiftUIGenerationMode: string;
   roundTailwind: boolean;
+  mode: string;
 };
 export const run = (settings: PluginSettings) => {
   // ignore when nothing was selected
@@ -29,12 +30,21 @@ export const run = (settings: PluginSettings) => {
     figma.currentPage.selection,
     null
   );
-  // let result = tailwindMain(convertedSelection, settings);
-  let array = tailwindMain1(convertedSelection, settings)
-  let result1 = tailwindMain(array, settings)
+  let result = ''
+  switch (settings.mode) {
+    case "tailwind":
+      let array = tailwindMain1(convertedSelection, settings)
+      result = tailwindMain(array, settings)
+      break
+    case "style":
+      result = styleMain(convertedSelection)
+      break
+    default:
+      break
+  }
   figma.ui.postMessage({
     type: "code",
-    data: result1,
+    data: result,
     settings: settings,
     htmlPreview: null,
     preferences: settings,
@@ -42,7 +52,8 @@ export const run = (settings: PluginSettings) => {
 };
 export const codegenRun = (selection :any, settings: PluginSettings): string => { 
   const convertedSelection = convertIntoNodes(selection,null);
-  let array = tailwindMain1(convertedSelection, settings)
-  let result = tailwindMain(array, settings)
+  // let array = tailwindMain1(convertedSelection, settings)
+  // let result = tailwindMain(array, settings)
+  let result = styleMain(convertedSelection)
   return result
 }
