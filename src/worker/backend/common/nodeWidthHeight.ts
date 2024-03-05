@@ -41,7 +41,6 @@ export const nodeSize = (
   const counterAxisMode = modesSwapped
     ? "primaryAxisSizingMode"
     : "counterAxisSizingMode";
-
   return {
     width: isWidthFill
       ? "fill"

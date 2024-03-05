@@ -162,9 +162,17 @@ export class TailwindTextBuilder extends TailwindDefaultBuilder {
    * example: leading-3
    */
   lineHeight(lineHeight: LineHeight, fontSize: number): string {
-    const lineHeightProp = commonLineHeight(lineHeight, fontSize);
-    if (lineHeightProp > 0) {
-      const value = pxToLineHeight(lineHeightProp);
+    let lineHeightProp = commonLineHeight(lineHeight, fontSize);
+    if(lineHeightProp < fontSize){
+      lineHeightProp = fontSize
+    }
+    if (lineHeightProp > 0 && lineHeightProp != 22) {
+      let value
+      if(lineHeightProp % 4 === 0){
+        value = lineHeightProp / 4
+      }else{
+        value = `[${lineHeightProp}px]`
+      }
       return `leading-${value}`;
     }
 

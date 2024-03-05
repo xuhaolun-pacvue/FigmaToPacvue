@@ -46,7 +46,7 @@ export const tailwindSolidColor = (
   // example: text-red-500
   var opacity1 = opacity ?? 1.0
   var colorProp = `${kind}-${getTailwindFromFigmaRGB(color, opacity1)}`;
-  if(kind == 'text' && getTailwindFromFigmaRGB(color, opacity1) == '[var(--color-title--)]'){
+  if(["text-[var(--color-title--)]", "bg-[var(--el-color-white)]"].includes(colorProp)){
     colorProp = ''
   }
   // if fill isn't visible, it shouldn't be painted.

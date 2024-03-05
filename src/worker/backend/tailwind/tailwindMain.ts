@@ -13,13 +13,12 @@ let previousExecutionCache: { style: string; text: string }[];
 const selfClosingTags = ["img"];
 
 export const tailwindMain = (
-  sceneNode: Array<SceneNode>,
+  sceneNode: any[],
   settings: PluginSettings
 ): string => {
   // 设置本地 Tailwind 设置和执行缓存
   localTailwindSettings = settings;
   previousExecutionCache = [];
-
   // 生成 Tailwind 控件
   let result = tailwindWidgetGenerator(sceneNode, localTailwindSettings.jsx);
 
@@ -29,53 +28,48 @@ export const tailwindMain = (
   }
   return result;
 };
-const tailwindWidgetGenerator = (sceneNode: ReadonlyArray<SceneNode>, isJsx: boolean): string => {
+const tailwindWidgetGenerator = (sceneNode: any[], isJsx: boolean): string => {
   let comp = "";
   // 过滤非可见图层
-  const visibleSceneNode = sceneNode.filter((d) => d.visible);
-  visibleSceneNode.forEach((node) => {
-    const node1 = node as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(
-      node1,
-      localTailwindSettings.optimizeLayout
-    )
-    // 过滤非可见子图层
-    const visibleChildNode = childrNode.filter((e: SceneNode) => e.visible);
+	sceneNode.forEach((e) => {
     /* 判断当前图层是否与子图层一致 */
-    if(visibleChildNode.length == 1){
-      let nodeStr = JSON.stringify(node)
-      let nodeArr = nodeStr.split(node.name)
-      let childNodeStr = JSON.stringify(visibleChildNode[0])
-      let childNodeArr = childNodeStr.split(visibleChildNode[0].name)
-      /* 如果一致 则跳过当前图层 */ /* 如果当前图层只有一个子级 并且子级是输入框 跳过当前图层 */
-      if(nodeArr[1] == childNodeArr[1] || visibleChildNode[0].name.includes('特殊输入框')){
-        comp += tailwindWidgetGenerator(visibleChildNode, isJsx)
-        return
-      }
-    }
-    switch (node.type) {
+    // if(e.children.length == 1){
+    //   let nodeStr = JSON.stringify(e.node)
+    //   let nodeArr = nodeStr.split(e.node.name)
+    //   let childNodeStr = JSON.stringify(e.children[0].node)
+    //   let childNodeArr = childNodeStr.split(e.children[0].node.name)
+    //   /* 如果一致 则跳过当前图层 */ /* 如果当前图层只有一个子级 并且子级是输入框 跳过当前图层 */
+    //   if(nodeArr[1] == childNodeArr[1] || e.children[0].name.includes('特殊输入框')){
+    //     comp += tailwindWidgetGenerator(e.children, isJsx)
+    //     return
+    //   }
+    // }
+    switch (e.type) {
+			case "PACVUE":
+				comp += pacvueContainer(e)
+				break;
       case "RECTANGLE":
       case "ELLIPSE":
-        comp += tailwindContainer(node, "", "", isJsx);
+        comp += tailwindContainer(e.node, "", "", isJsx);
         break;
       case "GROUP":
-        comp += tailwindGroup(node, isJsx);
+        comp += tailwindGroup(e, isJsx);
         break;
       case "INSTANCE":
       case "FRAME":
       case "COMPONENT":
       case "COMPONENT_SET":
         // 根据节点名称生成不同类型的组件
-        comp += tailwindFrame(node, isJsx);
+        comp += tailwindFrame(e.node, e, isJsx);
         break;
       case "TEXT":
-        comp += tailwindText(node, isJsx);
+        comp += tailwindText(e.node, isJsx);
         break;
       case "LINE":
-        comp += tailwindLine(node, isJsx);
+        comp += tailwindLine(e.node, isJsx);
         break;
       case "SECTION":
-        comp += tailwindSection(node, isJsx);
+        comp += tailwindSection(e.node, isJsx);
         break;
       case "VECTOR":
         break;
@@ -85,10 +79,11 @@ const tailwindWidgetGenerator = (sceneNode: ReadonlyArray<SceneNode>, isJsx: boo
 };
 const tailwindFrame = (
   node: FrameNode | InstanceNode | ComponentNode | ComponentSetNode,
+  obj: any,
   isJsx: boolean
 ): string => {
   const width = node.width ? `width='${node.width}px'` : ''
-  if(node.name.includes('特殊输入框') || node.name.includes('文本域')){
+  if(node.name.includes('特殊输入框')){
     return pacvueInput(node)
   }
   if(node.name.includes('widget-arrow')){
@@ -100,18 +95,12 @@ const tailwindFrame = (
   if(node.name == '搜索框'){
     return `\n<pacvue-input ${width}>\n  <template #prefix>\n    <el-icon><PacvueIconSearch /></el-icon>\n  </template>\n</pacvue-input>`
   }
-  if(node.name=='开关'){
-    return '\n<pacvue-switch />'
-  }
-  if(node.name=='日期筛选'){
-    return '\n<PacvueDatePicker type="daterange" />'
-  }
   if(node.name.includes('主要按钮') || node.name.includes('灰色按钮')  || node.name.includes('次级按钮') || node.name.toLocaleLowerCase().includes('button') ){
     return pacvueButton(node, isJsx)
   }
   const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout)
   if(node.name == '单选框+文字'){
-    return tailwindWidgetGenerator(childrNode, isJsx);
+    return tailwindWidgetGenerator(obj.children, isJsx);
   }
   const visibleChildNode = childrNode.filter((e) => e.visible);
   const visibleChildNode0 = visibleChildNode[0] as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
@@ -131,39 +120,34 @@ const tailwindFrame = (
   }
   if(visibleChildNode.length >= 2){
     const visibleChildNodelast = visibleChildNode[visibleChildNode.length - 1] as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
-    if(visibleChildNode[0].name == '单选框'){
-      return pacvueRadio(node, isJsx)
-    }else if(visibleChildNode[0].name == '多选框'){
-      return pacvueCheckBox(node, isJsx)
-    }else if(isIcon(visibleChildNodelast)){
+    if(isIcon(visibleChildNodelast)){
       if(getIconName(visibleChildNodelast) == 'Rectangle 1138'){
         return '\n<PacvueDatePicker type="daterange" />'
       }
     }
   }
-  if (node.name == '选择器'){
-    if(visibleChildNode.length  == 1){
-      return pacvueInput(node)
-    }else{
-      return pacvueSelect(node)
-    }
-  }else if(node.name == '选择器-带标题' && visibleChildNode.length == 2){
-    const visibleChildNode0 = visibleChildNode[0] as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
-    console.log(visibleChildNode0)
-    const visibleChildNode0child = commonSortChildrenWhenInferredAutoLayout(visibleChildNode0, localTailwindSettings.optimizeLayout)
-    let comp = ""
-    if(visibleChildNode0child.length > 0){
-      const nodeText = visibleChildNode0child[0] as TextNode
-      comp = tailwindText(nodeText, isJsx)
-    }
-    const pacvueNode = visibleChildNode[1] as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
-    comp += pacvueSelect(pacvueNode)
-    return tailwindContainer(node, comp, "", isJsx);
-  }
+  // if (node.name == '选择器'){
+  //   if(visibleChildNode.length  == 1){
+  //     return pacvueInput(node)
+  //   }else{
+  //     return pacvueSelect(node)
+  //   }
+  // }else if(node.name == '选择器-带标题' && visibleChildNode.length == 2){
+  //   const visibleChildNode0 = visibleChildNode[0] as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
+  //   const visibleChildNode0child = commonSortChildrenWhenInferredAutoLayout(visibleChildNode0, localTailwindSettings.optimizeLayout)
+  //   let comp = ""
+  //   if(visibleChildNode0child.length > 0){
+  //     const nodeText = visibleChildNode0child[0] as TextNode
+  //     comp = tailwindText(nodeText, isJsx)
+  //   }
+  //   const pacvueNode = visibleChildNode[1] as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
+  //   comp += pacvueSelect(pacvueNode)
+  //   return tailwindContainer(node, comp, "", isJsx);
+  // }
   if(isIcon(node)){
     return pacvueIcon(node)
   }
-  const childrenStr = tailwindWidgetGenerator(childrNode, isJsx );
+  const childrenStr = tailwindWidgetGenerator(obj.children, isJsx);
   if (node.layoutMode !== "NONE") {
     const rowColumn = tailwindAutoLayoutProps(node, node);
     return tailwindContainer(node, childrenStr, rowColumn, isJsx);
@@ -176,16 +160,19 @@ const tailwindFrame = (
     return tailwindContainer(node, childrenStr, "", isJsx);
   }
 };
-const tailwindGroup = (node: GroupNode, isJsx: boolean = false): string => {
+const tailwindGroup = (obj: any, isJsx: boolean = false): string => {
   // 忽略尺寸为零或更小的视图
   // 虽然在技术上不应该小于0，由于四舍五入的原因，
   // 它可能变为类似于：-0.000004196293048153166 的值
   // 如果内部没有子元素，也忽略，因为这是没有意义的
-  if (node.width < 0 || node.height <= 0 || node.children.length === 0) {
+	const node = obj.node	as GroupNode
+  if (obj.width < 0 || node.height <= 0 || node.children.length === 0) {
     return "";
   }
   // 在调用CustomNode之后，需要调用这个，因为widthHeight依赖于它
-  const builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).blend(node).size(node, localTailwindSettings.optimizeLayout).position(node, localTailwindSettings.optimizeLayout);
+  const builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).blend(node);
+	builder.size1(obj);
+	builder.position(node, localTailwindSettings.optimizeLayout);
   const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout)
   const visibleChildNode = childrNode.filter((e: SceneNode) => e.visible && ['RECTANGLE', 'VECTOR'].includes(e.type));
   if(visibleChildNode.length > 1){
@@ -196,16 +183,15 @@ const tailwindGroup = (node: GroupNode, isJsx: boolean = false): string => {
   if (builder.attributes || builder.style) {
     const attr = builder.build("");
 
-    const generator = tailwindWidgetGenerator(node.children, isJsx);
+    const generator = tailwindWidgetGenerator(obj.children, isJsx);
     return `\n<div${attr}>${indentString(generator)}\n</div>`;
   }
 
-  return tailwindWidgetGenerator(node.children, isJsx);
+  return tailwindWidgetGenerator(obj.children, isJsx);
 };
 
 export const tailwindText = (node: TextNode, isJsx: boolean): string => {
   let layoutBuilder = new TailwindTextBuilder(node, localTailwindSettings.layerName, isJsx).commonPositionStyles(node, localTailwindSettings.optimizeLayout).textAlign(node);
-
   const styledHtml = layoutBuilder.getTextSegments(node.id);
   previousExecutionCache.push(...styledHtml);
 
@@ -258,8 +244,9 @@ export const tailwindLine = (node: LineNode, isJsx: boolean): string => {
   const builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).commonPositionStyles(node, localTailwindSettings.optimizeLayout).commonShapeStyles(node);
   return `\n<div${builder.build()}></div>`;
 };
-export const tailwindSection = (node: SectionNode, isJsx: boolean): string => {
-  const childrenStr = tailwindWidgetGenerator(node.children, isJsx);
+const tailwindSection = (obj: any, isJsx: boolean): string => {
+	const node = obj.node	as SectionNode
+  const childrenStr = tailwindWidgetGenerator(obj.children, isJsx);
   const builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).size(node, localTailwindSettings.optimizeLayout).position(node, localTailwindSettings.optimizeLayout).customColor(node.fills, "bg");
   if (childrenStr) {
     return `\n<div${builder.build()}>${indentString(childrenStr)}\n</div>`;
@@ -269,7 +256,8 @@ export const tailwindSection = (node: SectionNode, isJsx: boolean): string => {
 };
 
 /* Pacvue相关 */
-const pacvueButton =  (node: FrameNode | InstanceNode | ComponentNode | ComponentSetNode, isJsx: boolean): string => {
+const pacvueButton =  (obj: any, isJsx: boolean): string => {
+  const node = obj.node as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
   let type = ' type="primary"'
   if(node.name.includes('灰色按钮')){
     type = ''
@@ -277,49 +265,29 @@ const pacvueButton =  (node: FrameNode | InstanceNode | ComponentNode | Componen
   if(node.name.includes('次级按钮')){
     type = ' type="primary" plain'
   }
-  const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout)
-  const visibleChildNode = childrNode.filter((e: SceneNode) => e.visible);
   let index = 0
   let text = ''
   let icon = ''
   let width = node.width ? `width='${node.width}px'` : ''
-  if(visibleChildNode.length == 1 && visibleChildNode[0].type != 'TEXT'){
-    return tailwindWidgetGenerator(childrNode, isJsx);
+  if(obj.children.length == 1 && obj.children[0].type != 'TEXT'){
+    return tailwindWidgetGenerator(obj.children, isJsx);
   }
-  for(let e of visibleChildNode){
+  for(let e of obj.children){
     index ++
     if(e.type == 'TEXT'){
-      text = e.characters
+      text = e.node.characters
       break
     }
   }
-  if(visibleChildNode.length > 1){
+  if(obj.children.length > 1){
     if(index > 1){
       icon = `\n<el-icon :size="20" style="margin-right: 8px">\n  <PacvueIconAdd></PacvueIconAdd>\n</el-icon>`
     }
-    if(index < visibleChildNode.length){
+    if(index < obj.children.length){
       return `\n<pacvue-dropdown>\n  <template #reference>\n    <pacvue-button type="primary" plain>\n      ${icon}${text}\n      <el-icon :size="20" style="margin-left: 8px">\n        <PacvueIconTopBarArrowDown></PacvueIconTopBarArrowDown>\n      </el-icon>\n    </pacvue-button>\n  </template>\n</pacvue-dropdown>`
     }
   }
   return `\n<pacvue-button${type} ${width}>${icon}${text}</pacvue-button>`
-}
-const pacvueCheckBox = (node: FrameNode | InstanceNode | ComponentNode | ComponentSetNode, isJsx: boolean ): string => {
-  let text = findSpecifiedChiuldren(commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout), isJsx)
-  return `\n<pacvue-checkbox>${text}</pacvue-checkbox>`
-}
-const pacvueRadio = (node: FrameNode | InstanceNode | ComponentNode | ComponentSetNode, isJsx: boolean ): string => {
-  const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout)
-  let text = findSpecifiedChiuldren(childrNode, isJsx)
-  const visibleChildNode = childrNode.filter((e: SceneNode) => e.visible);
-  const visibleChildNode1 = visibleChildNode[1] as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
-  const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode1, localTailwindSettings.optimizeLayout)
-  let tootip = ""
-  grandChildrNode.forEach(e=>{
-    if(e.name == 'tips-exclamation'){
-      tootip = `\n<pacvue-tooltip placement="top" effect="dark">\n  <template #content>\n    <div><!-- Tooltip文案 --></div>\n  </template>\n  <el-icon :size="${e.width}" color="#66666c" class="ml-1"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>\n`
-    }
-  })
-  return `\n<pacvue-radio>\n  <div class="flex items-center">${text}${tootip}\n  </div>\n</pacvue-radio>`
 }
 const pacvueInput = (node: FrameNode | InstanceNode | ComponentNode | ComponentSetNode): string => {
   let width = node.width ? `width='${node.width}px'` : ''
@@ -369,7 +337,7 @@ const pacvueIcon = (node: FrameNode | InstanceNode | ComponentNode | ComponentSe
   }
   if(node.name == 'tips-exclamation'){
     iconName = 'PacvueIconTipsExclamation'
-    return `\n<pacvue-tooltip placement="top" effect="dark">\n  <template #content>\n    <div><!-- Tooltip文案 --></div>\n  </template>\n  <el-icon :size="${node.width}" color="#66666c" class="ml-1"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>`
+    return `\n<pacvue-tooltip placement="top" effect="dark">\n  <template #content>\n    <div><!-- Tooltip文案 --></div>\n  </template>\n  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>`
   }
   return `\n<el-icon :size="${node.width}">\n  <${iconName} />\n</el-icon>`;
 }
@@ -434,4 +402,86 @@ const getIconName = (node: FrameNode | InstanceNode | ComponentNode | ComponentS
     }
   })
   return iconName
+}
+const pacvueContainer = (node:any): string=>{
+	var ary = node.name.split('-')
+	var comp = ''
+	const width = node.width ? ` width="${node.width}px"` : ''
+	const classHtml = node.style.length > 0 ?  ` class="${node.style.join(" ")}"` : ""
+	switch (ary[0]){
+		case 'PacvueSelect':
+			const labelInner = ary[1] ? ` :labelInner="'${ary[1]}'"` : ''
+			comp = `\n<${ary[0]}${width}${classHtml} ${labelInner} />`
+			break
+		case 'PacvueInput':
+			let endTag = ' />'
+			if(ary[1]){
+				if(ary[1] == 'Textarea') {
+					let rows = node.height ? ` :rows="${((node.height-10) / 21).toFixed(0)}"` : ''
+					endTag = ' type="textarea"' + rows + '/>'
+				}else if(ary[1] == 'Search') {
+					endTag = ` >\n  <template #prefix>\n    <el-icon><PacvueIconSearch /></el-icon>\n  </template>\n</${ary[0]}>`
+				}else if(ary[1] == '%') {
+					endTag = ` >\n  <template #suffix>\n    <span>${ary[1]}</span>\n  </template>\n</${ary[0]}>`
+				}else{
+					endTag = ` >\n  <template #prefix>\n    <span>${ary[1]}</span>\n  </template>\n</${ary[0]}>`
+				}
+			}
+			comp = `\n<${ary[0]}${width}${classHtml}${endTag}`;
+		break
+		case 'PacvueDatePicker':
+      const datePickerWidth = node.width ? ` style="width: ${node.width} !important"` : ''
+			comp = `\n<${ary[0]}${datePickerWidth} type="${ary[1]}" />`
+			break
+		case 'PacvueCheckbox':
+		case 'PacvueRadio':
+			let tootip = ""
+			let text = node.html
+			if(ary[1]){
+				if(ary[1] == 'Tips') {
+					tootip = `\n<pacvue-tooltip placement="top" effect="dark">\n  <template #content>\n    <div><!-- Tooltip文案 --></div>\n  </template>\n  <el-icon :size="20" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>\n`
+					text = `\n  <div class="flex items-center">${text}${tootip}\n  </div>\n`
+				}
+			}
+			comp = `\n<${ary[0]} style="margin-right: 0">${text}</${ary[0]}>`
+			break
+		case 'PacvueButton':
+      let type = ""
+      let icon = ""
+      let size = ""
+      if(ary[1]){
+        if(ary[1].includes('primary')){
+          type = ` type="primary"`
+        }
+        if(ary[1].includes('plain')){
+          type += ' plain'
+        }
+      }
+      if(ary[2]){
+        icon = `\n<el-icon :size="20">\n  <${ary[2]}></${ary[2]}>\n</el-icon>\n`
+      }
+      if(node.height == 32){
+        size = ' size="small"'
+      }
+			comp = `\n<${ary[0]}${type}${size}>${icon}${node.html}</${ary[0]}>`
+			break
+		case 'PacvueSwitch':
+			comp = `\n<${ary[0]} />`
+			break
+		case 'PacvueRadioGroup':
+      comp = `\n<pacvue-radio-group>${node.html}\n</pacvue-radio-group>`
+			break
+    case 'PacvueTab':
+      comp = `\n<PacvueTab tab-position="top">${node.html}\n</PacvueTab>`
+      break
+    case 'PacvueIcon':
+      if(ary[1] == 'PacvueIconTipsExclamation'){
+        return `\n<pacvue-tooltip placement="top" effect="dark">\n  <template #content>\n    <div><!-- Tooltip文案 --></div>\n  </template>\n  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>`
+      }
+      comp = `\n<el-icon :size="20">\n  <${ary[1]}></${ary[1]}>\n</el-icon>\n`
+      break
+		default:
+			return ''
+	}
+	return comp
 }

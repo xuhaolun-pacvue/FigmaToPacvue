@@ -24,7 +24,7 @@ export const tailwindSizePartial = (
     ) {
       w = `grow shrink basis-0`;
     } else {
-      w = `self-stretch`;
+      w = `w-full`;
     }
   }
 

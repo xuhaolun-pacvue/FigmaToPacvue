@@ -1,5 +1,6 @@
 import {
   run,
+  codegenRun,
   PluginSettings,
 } from "./backend";
 
@@ -85,13 +86,53 @@ const standardMode = async () => {
   };
 };
 
+const codegenMode = async () => {
+  // figma.showUI(__html__, { visible: false });
+  await getUserSettings();
+
+  const settings = {
+    ...userPluginSettings,
+    jsx: false,
+  }
+  figma.codegen.on("generate", ({ language, node }) => {
+    const code = codegenRun([node], settings)
+    switch (language) {
+      case "tailwind":
+        return [
+          {
+            title: `Code`,
+            code: code,
+            language: "HTML",
+          },
+          // {
+          //   title: `Colors`,
+          //   code: retrieveGenericSolidUIColors("Tailwind")
+          //     .map((d) => `#${d.hex} <- ${d.colorName}`)
+          //     .join("\n"),
+          //   language: "HTML",
+          // },
+          // {
+          //   title: `Text Styles`,
+          //   code: tailwindCodeGenTextStyles(),
+          //   language: "HTML",
+          // },
+        ];
+      default:
+        break;
+    }
+
+    const blocks: CodegenResult[] = [];
+    return blocks;
+  });
+};
+
 switch (figma.mode) {
   case "default":
   case "inspect":
     standardMode();
     break;
   case "codegen":
-    // codegenMode();
+    codegenMode();
     break;
   default:
     break;

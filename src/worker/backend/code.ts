@@ -1,5 +1,7 @@
 import { convertIntoNodes } from "./altNodes/altConversion";
 import { tailwindMain } from "./tailwind/tailwindMain";
+import { tailwindMain1 } from "./tailwind/tailwindMain1";
+import { tailwindMain2 } from "./tailwind/tailwindMain2";
 
 export type FrameworkTypes = "Tailwind";
 
@@ -27,12 +29,20 @@ export const run = (settings: PluginSettings) => {
     figma.currentPage.selection,
     null
   );
-  let result = tailwindMain(convertedSelection, settings);
+  // let result = tailwindMain(convertedSelection, settings);
+  let array = tailwindMain1(convertedSelection, settings)
+  let result1 = tailwindMain(array, settings)
   figma.ui.postMessage({
     type: "code",
-    data: result,
+    data: result1,
     settings: settings,
     htmlPreview: null,
     preferences: settings,
   });
 };
+export const codegenRun = (selection :any, settings: PluginSettings): string => { 
+  const convertedSelection = convertIntoNodes(selection,null);
+  let array = tailwindMain1(convertedSelection, settings)
+  let result = tailwindMain(array, settings)
+  return result
+}

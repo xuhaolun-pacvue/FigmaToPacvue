@@ -6,7 +6,7 @@ import { tailwindColorFromFills, tailwindGradientFromFills, } from "./builderImp
 import { tailwindSizePartial } from "./builderImpl/tailwindSize";
 import { tailwindPadding } from "./builderImpl/tailwindPadding";
 import { commonIsAbsolutePosition, getCommonPositionValue, } from "../common/commonPosition";
-import { pxToBlur } from "./conversionTables";
+import { pxToBlur, pxToLayoutSize } from "./conversionTables";
 
 export class TailwindDefaultBuilder {
   attributes: string[] = [];
@@ -155,6 +155,29 @@ export class TailwindDefaultBuilder {
 
     if (node.type === "TEXT") {
       switch (node.textAutoResize) {
+        case "WIDTH_AND_HEIGHT":
+          break;
+        case "HEIGHT":
+          this.addAttributes(width);
+          break;
+        case "NONE":
+        case "TRUNCATE":
+          this.addAttributes(width, height);
+          break;
+      }
+    } else {
+      this.addAttributes(width, height);
+    }
+
+    return this;
+  }
+
+  size1(obj:any): this {
+    const width = `w-${pxToLayoutSize(obj.width)}`;
+    const height = `h-${pxToLayoutSize(obj.height)}`;
+
+    if (obj.node.type === "TEXT") {
+      switch (obj.node.textAutoResize) {
         case "WIDTH_AND_HEIGHT":
           break;
         case "HEIGHT":

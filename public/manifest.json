@@ -16,11 +16,6 @@
     ]
   },
   "codegenLanguages": [
-    { "label": "HTML", "value": "html" },
-    { "label": "React (JSX)", "value": "html_jsx" },
-    { "label": "Tailwind", "value": "tailwind" },
-    { "label": "Tailwind (JSX)", "value": "tailwind_jsx" },
-    { "label": "Flutter", "value": "flutter" },
-    { "label": "SwiftUI", "value": "swiftUI" }
+    { "label": "Tailwind", "value": "tailwind" }
   ]
 }
