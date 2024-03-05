@@ -1154,6 +1154,7 @@
       return `${property}: ${value}`;
     }
   };
+  var formatMultipleJSX = (styles, isJsx) => Object.entries(styles).filter(([key, value]) => value).map(([key, value]) => formatWithJSX(key, isJsx, value)).join(isJsx ? ", " : "; ");
 
   // src/worker/backend/tailwind/builderImpl/tailwindSize.ts
   var tailwindSizePartial = (node, optimizeLayout) => {
@@ -3280,13 +3281,142 @@
     }
   };
 
+  // src/worker/backend/style/htmlTextBuilder.ts
+  var HtmlTextBuilder = class extends HtmlDefaultBuilder {
+    constructor(node, showLayerName, optIsJSX) {
+      super(node, showLayerName, optIsJSX);
+    }
+    getTextSegments(id) {
+      const segments = globalTextStyleSegments[id];
+      if (!segments) {
+        return [];
+      }
+      return segments.map((segment) => {
+        const styleAttributes = formatMultipleJSX(
+          {
+            color: htmlColorFromFills(segment.fills),
+            "font-size": segment.fontSize,
+            "font-family": segment.fontName.family,
+            "font-style": this.getFontStyle(segment.fontName.style),
+            "font-weight": `${segment.fontWeight}`,
+            "text-decoration": this.textDecoration(segment.textDecoration),
+            "text-transform": this.textTransform(segment.textCase),
+            "line-height": this.lineHeight(segment.lineHeight, segment.fontSize),
+            "letter-spacing": this.letterSpacing(
+              segment.letterSpacing,
+              segment.fontSize
+            ),
+            // "text-indent": segment.indentation,
+            "word-wrap": "break-word"
+          },
+          this.isJSX
+        );
+        const charsWithLineBreak = segment.characters.split("\n").join("<br/>");
+        return { style: styleAttributes, text: charsWithLineBreak };
+      });
+    }
+    fontSize(node, isUI = false) {
+      if (node.fontSize !== figma.mixed) {
+        const value = isUI ? Math.min(node.fontSize, 24) : node.fontSize;
+        this.addStyles(formatWithJSX("font-size", this.isJSX, value));
+      }
+      return this;
+    }
+    textDecoration(textDecoration) {
+      switch (textDecoration) {
+        case "STRIKETHROUGH":
+          return "line-through";
+        case "UNDERLINE":
+          return "underline";
+        case "NONE":
+          return "";
+      }
+    }
+    textTransform(textCase) {
+      switch (textCase) {
+        case "UPPER":
+          return "uppercase";
+        case "LOWER":
+          return "lowercase";
+        case "TITLE":
+          return "capitalize";
+        case "ORIGINAL":
+        case "SMALL_CAPS":
+        case "SMALL_CAPS_FORCED":
+        default:
+          return "";
+      }
+    }
+    letterSpacing(letterSpacing, fontSize) {
+      const letterSpacingProp = commonLetterSpacing(letterSpacing, fontSize);
+      if (letterSpacingProp > 0) {
+        return letterSpacingProp;
+      }
+      return null;
+    }
+    lineHeight(lineHeight, fontSize) {
+      const lineHeightProp = commonLineHeight(lineHeight, fontSize);
+      if (lineHeightProp > 0) {
+        return lineHeightProp;
+      }
+      return null;
+    }
+    /**
+     * https://tailwindcss.com/docs/font-style/
+     * example: font-extrabold
+     * example: italic
+     */
+    getFontStyle(style) {
+      if (style.toLowerCase().match("italic")) {
+        return "italic";
+      }
+      return "";
+    }
+    textAlign(node) {
+      if (node.textAlignHorizontal && node.textAlignHorizontal !== "LEFT") {
+        let textAlign = "";
+        switch (node.textAlignHorizontal) {
+          case "CENTER":
+            textAlign = "center";
+            break;
+          case "RIGHT":
+            textAlign = "right";
+            break;
+          case "JUSTIFIED":
+            textAlign = "justify";
+            break;
+        }
+        this.addStyles(formatWithJSX("text-align", this.isJSX, textAlign));
+      }
+      return this;
+    }
+  };
+
   // src/worker/backend/style/styleMain.ts
   var styleMain = (sceneNode) => {
     const visibleSceneNode = sceneNode.filter((d) => d.visible);
     const node = visibleSceneNode[0];
-    const builder = new HtmlDefaultBuilder(node, false, false).commonPositionStyles(node, true).commonShapeStyles(node);
-    const style = builder.styles.join(";\n");
-    return style;
+    let builder;
+    if (node.type == "TEXT") {
+      builder = new HtmlTextBuilder(node, false, false).commonPositionStyles(node, true).textAlign(node);
+      const styledHtml = builder.getTextSegments(node.id);
+      var html = "";
+      for (let i of styledHtml) {
+        if (i.text && i.text != " ") {
+          const arr = i.style.split("; ");
+          let css = arr.join(";\n  ");
+          html += `${i.text} {
+  ${css}
+}
+`;
+        }
+      }
+      return html;
+    } else {
+      builder = new HtmlDefaultBuilder(node, false, false).commonPositionStyles(node, true).commonShapeStyles(node);
+      const style = builder.styles.join(";\n");
+      return style;
+    }
   };
 
   // src/worker/backend/code.ts
