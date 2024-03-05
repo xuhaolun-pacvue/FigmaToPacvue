@@ -174,4 +174,5 @@ export const svgIcon  = {
 	"Shopping, buybox": "PacvueIconShoppingCart",
 	"Ticket 、coupon": "PacvueIconDiscountCoupon",
 	"Skip": "PacvueIconSkip1",
+	"IconCursorMouse/size4":""
 }

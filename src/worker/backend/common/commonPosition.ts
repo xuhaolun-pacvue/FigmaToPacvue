@@ -138,9 +138,7 @@ export const commonIsAbsolutePosition = (
     if (!node.parent || node.parent === undefined) {
       return false;
     }
-
-    const parentLayoutIsNone =
-      "layoutMode" in node.parent && node.parent.layoutMode === "NONE";
+    const parentLayoutIsNone = "layoutMode" in node.parent && node.parent.layoutMode === "NONE";
     const hasNoLayoutMode = !("layoutMode" in node.parent);
     if ( node.layoutPositioning === "ABSOLUTE" || parentLayoutIsNone || hasNoLayoutMode) {
       return true;

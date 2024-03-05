@@ -166,14 +166,17 @@ export class TailwindTextBuilder extends TailwindDefaultBuilder {
     if(lineHeightProp < fontSize){
       lineHeightProp = fontSize
     }
-    if (lineHeightProp > 0 && lineHeightProp != 22) {
-      let value
-      if(lineHeightProp % 4 === 0){
-        value = lineHeightProp / 4
-      }else{
-        value = `[${lineHeightProp}px]`
+    const value1 = pxToFontSize(fontSize);
+    if(value1.includes('px]')){
+      if (lineHeightProp > 24) {
+        let value
+        if(lineHeightProp % 4 === 0){
+          value = lineHeightProp / 4
+        }else{
+          value = `[${lineHeightProp}px]`
+        }
+        return `leading-${value}`;
       }
-      return `leading-${value}`;
     }
 
     return "";

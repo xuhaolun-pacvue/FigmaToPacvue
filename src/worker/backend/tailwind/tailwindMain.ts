@@ -83,9 +83,6 @@ const tailwindFrame = (
   isJsx: boolean
 ): string => {
   const width = node.width ? `width='${node.width}px'` : ''
-  if(node.name.includes('特殊输入框')){
-    return pacvueInput(node)
-  }
   if(node.name.includes('widget-arrow')){
     return pacvueIcon(node)
   }
@@ -126,24 +123,6 @@ const tailwindFrame = (
       }
     }
   }
-  // if (node.name == '选择器'){
-  //   if(visibleChildNode.length  == 1){
-  //     return pacvueInput(node)
-  //   }else{
-  //     return pacvueSelect(node)
-  //   }
-  // }else if(node.name == '选择器-带标题' && visibleChildNode.length == 2){
-  //   const visibleChildNode0 = visibleChildNode[0] as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
-  //   const visibleChildNode0child = commonSortChildrenWhenInferredAutoLayout(visibleChildNode0, localTailwindSettings.optimizeLayout)
-  //   let comp = ""
-  //   if(visibleChildNode0child.length > 0){
-  //     const nodeText = visibleChildNode0child[0] as TextNode
-  //     comp = tailwindText(nodeText, isJsx)
-  //   }
-  //   const pacvueNode = visibleChildNode[1] as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
-  //   comp += pacvueSelect(pacvueNode)
-  //   return tailwindContainer(node, comp, "", isJsx);
-  // }
   if(isIcon(node)){
     return pacvueIcon(node)
   }
@@ -174,10 +153,13 @@ const tailwindGroup = (obj: any, isJsx: boolean = false): string => {
 	builder.size1(obj);
 	builder.position(node, localTailwindSettings.optimizeLayout);
   const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout)
-  const visibleChildNode = childrNode.filter((e: SceneNode) => e.visible && ['RECTANGLE', 'VECTOR'].includes(e.type));
+  const visibleChildNode = childrNode.filter((e: SceneNode) => (e.visible && ['RECTANGLE', 'VECTOR'].includes(e.type)) || e.name.includes("矩形"));
   if(visibleChildNode.length > 1){
     visibleChildNode.forEach(e=>{
-      builder.border(e)
+      const cnode = node as SceneNode & SceneNodeMixin & BlendMixin & LayoutMixin & GeometryMixin & MinimalBlendMixin
+      if(retrieveTopFill(cnode.fills)?.type !== "IMAGE"){
+        builder.border(e)
+      }
     })
   }
   if (builder.attributes || builder.style) {
@@ -213,22 +195,38 @@ export const tailwindContainer = (node: SceneNode & SceneNodeMixin & BlendMixin 
   }
 
   let builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).commonPositionStyles(node, localTailwindSettings.optimizeLayout).commonShapeStyles(node);
+  let builder2 =  new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).commonShapeStyles(node);
   const asnode = node as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
   const childrNode = commonSortChildrenWhenInferredAutoLayout(asnode,localTailwindSettings.optimizeLayout)
-  const visibleChildNode = childrNode.filter((e: SceneNode) => e.visible && ['RECTANGLE', 'VECTOR'].includes(e.type));
-  if(visibleChildNode.length == 1){
-    builder.border(visibleChildNode[0])
+  const visibleChildNode = childrNode.filter((e: SceneNode) => e.visible && ['RECTANGLE', 'VECTOR'].includes(e.type) && e.name.includes("矩形"));
+  if(visibleChildNode.length > 1){
+    visibleChildNode.forEach(e=>{
+      const cnode = node as SceneNode & SceneNodeMixin & BlendMixin & LayoutMixin & GeometryMixin & MinimalBlendMixin
+      if(retrieveTopFill(cnode.fills)?.type !== "IMAGE"){
+        builder.border(e)
+      }
+    })
   }
   if (builder.attributes || additionalAttr) {
-    const build = builder.build(additionalAttr);
+    var build = builder.build(additionalAttr);
     // image fill and no children -- let's emit an <img />
     let tag = "div";
     let src = "";
     if (retrieveTopFill(node.fills)?.type === "IMAGE") {
-      if (!("children" in node) || node.children.length === 0) {tag = "img";src = ` src="https://via.placeholder.com/${node.width.toFixed(0)}x${node.height.toFixed(0)}"`;
+      if (!("children" in node) || node.children.length === 0) {
+        build = builder2.build(additionalAttr);
+        tag = "img";
+        src = ` src="https://via.placeholder.com/${node.width.toFixed(0)}x${node.height.toFixed(0)}"`;
       } else {
         builder.addAttributes(`bg-[url(https://via.placeholder.com/${node.width.toFixed(0)}x${node.height.toFixed(0)})]`);
       }
+    }
+    if(build.includes(' px-6 pt-6 pb-8')){
+      build = build.replace(' px-6 pt-6 pb-8', "")
+      let a = build.split(' ')
+      let b = a.filter(e=> !e.includes('w-')&& e != "")
+      console.log()
+      build = ' class="' + b.join(" ")
     }
     if (children) {
       return `\n<${tag}${build}${src}>${indentString(children)}\n</${tag}>`;
@@ -334,11 +332,6 @@ const pacvueInput = (node: FrameNode | InstanceNode | ComponentNode | ComponentS
   }
   return `\n<pacvue-input ${width} ${textarea}${endTag}`;
 };
-const pacvueSelect = (node: FrameNode | InstanceNode | ComponentNode | ComponentSetNode): string => {
-  let width = node.width ? `width='${node.width}px'` : ''
-  return `\n<pacvue-select ${width}/>`;
-};
-
 const pacvueIcon = (node: FrameNode | InstanceNode | ComponentNode | ComponentSetNode): string => {
   let iconName = 'PacvueIconAmazon'
   if(node.name == 'widget-arrow-down'){
@@ -455,7 +448,7 @@ const pacvueContainer = (node:any): string=>{
 					text = `\n  <div class="flex items-center">${text}${tootip}\n  </div>\n`
 				}
 			}
-			comp = `\n<${ary[0]} style="margin-right: 0">${text}</${ary[0]}>`
+			comp = `\n<${ary[0]} style="margin-right: 0">${text}\n</${ary[0]}>`
 			break
 		case 'PacvueButton':
       let type = ""
@@ -470,7 +463,7 @@ const pacvueContainer = (node:any): string=>{
         }
       }
       if(ary[2]){
-        icon = `\n<el-icon :size="20">\n  <${ary[2]}></${ary[2]}>\n</el-icon>\n`
+        icon = `<el-icon :size="20"><${ary[2]}></${ary[2]}></el-icon>`
       }
       if(node.height == 32){
         size = ' size="small"'
@@ -480,7 +473,16 @@ const pacvueContainer = (node:any): string=>{
 		case 'PacvueSwitch':
 			comp = `\n<${ary[0]} />`
 			break
-		case 'PacvueRadioGroup':
+    case 'PacvueRadioGroup':
+      let builder = new TailwindDefaultBuilder(node.node, localTailwindSettings.layerName, false).commonPositionStyles(node.node, localTailwindSettings.optimizeLayout).commonShapeStyles(node.node);
+      const rowColumn = tailwindAutoLayoutProps(node.node, node.node.inferredAutoLayout);
+      var build = ''
+      if (builder.attributes || rowColumn) {
+        build = builder.build(rowColumn);
+      }
+      comp = `\n<pacvue-radio-group ${build}>${tailwindWidgetGenerator(node.children, false)}\n</pacvue-radio-group>`
+      break
+		case 'PacvueButtonTab':
       comp = `\n<pacvue-radio-group>${node.html}\n</pacvue-radio-group>`
 			break
     case 'PacvueTab':
@@ -490,7 +492,7 @@ const pacvueContainer = (node:any): string=>{
       if(ary[1] == 'PacvueIconTipsExclamation'){
         return `\n<pacvue-tooltip placement="top" effect="dark">\n  <template #content>\n    <div><!-- Tooltip文案 --></div>\n  </template>\n  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>`
       }
-      comp = `\n<el-icon :size="20">\n  <${ary[1]}></${ary[1]}>\n</el-icon>\n`
+      comp = `\n<el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`
       break
 		default:
 			return ''

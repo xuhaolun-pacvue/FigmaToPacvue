@@ -1139,6 +1139,36 @@
     };
   };
 
+  // src/worker/backend/common/commonPosition.ts
+  var getCommonPositionValue = (node) => {
+    if (node.parent && node.parent.type === "GROUP") {
+      return {
+        x: node.x - node.parent.x,
+        y: node.y - node.parent.y
+      };
+    }
+    return {
+      x: node.x,
+      y: node.y
+    };
+  };
+  var commonIsAbsolutePosition = (node, optimizeLayout) => {
+    if (optimizeLayout && node.parent && "layoutMode" in node.parent && node.parent.inferredAutoLayout !== null) {
+      return false;
+    }
+    if ("layoutAlign" in node) {
+      if (!node.parent || node.parent === void 0) {
+        return false;
+      }
+      const parentLayoutIsNone = "layoutMode" in node.parent && node.parent.layoutMode === "NONE";
+      const hasNoLayoutMode = !("layoutMode" in node.parent);
+      if (node.layoutPositioning === "ABSOLUTE" || parentLayoutIsNone || hasNoLayoutMode) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   // src/worker/backend/common/parseJSX.ts
   var formatWithJSX = (property, isJsx, value) => {
     const jsx_property = property.split("-").map((d, i) => i > 0 ? d.charAt(0).toUpperCase() + d.slice(1) : d).join("");
@@ -1173,7 +1203,9 @@
     }
     let h = "";
     if (typeof size.height === "number") {
-      h = `h-${pxToLayoutSize(size.height)}`;
+      if (commonIsAbsolutePosition(node, optimizeLayout)) {
+        h = `h-${pxToLayoutSize(size.height)}`;
+      }
     } else if (size.height === "fill") {
       if (size.height === "fill" && nodeParent && "layoutMode" in nodeParent && nodeParent.layoutMode === "VERTICAL") {
         h = `grow shrink basis-0`;
@@ -1249,36 +1281,6 @@
       );
     }
     return comp;
-  };
-
-  // src/worker/backend/common/commonPosition.ts
-  var getCommonPositionValue = (node) => {
-    if (node.parent && node.parent.type === "GROUP") {
-      return {
-        x: node.x - node.parent.x,
-        y: node.y - node.parent.y
-      };
-    }
-    return {
-      x: node.x,
-      y: node.y
-    };
-  };
-  var commonIsAbsolutePosition = (node, optimizeLayout) => {
-    if (optimizeLayout && node.parent && "layoutMode" in node.parent && node.parent.inferredAutoLayout !== null) {
-      return false;
-    }
-    if ("layoutAlign" in node) {
-      if (!node.parent || node.parent === void 0) {
-        return false;
-      }
-      const parentLayoutIsNone = "layoutMode" in node.parent && node.parent.layoutMode === "NONE";
-      const hasNoLayoutMode = !("layoutMode" in node.parent);
-      if (node.layoutPositioning === "ABSOLUTE" || parentLayoutIsNone || hasNoLayoutMode) {
-        return true;
-      }
-    }
-    return false;
   };
 
   // src/worker/backend/tailwind/tailwindDefaultBuilder.ts
@@ -1630,14 +1632,17 @@
       if (lineHeightProp < fontSize) {
         lineHeightProp = fontSize;
       }
-      if (lineHeightProp > 0 && lineHeightProp != 22) {
-        let value;
-        if (lineHeightProp % 4 === 0) {
-          value = lineHeightProp / 4;
-        } else {
-          value = `[${lineHeightProp}px]`;
+      const value1 = pxToFontSize(fontSize);
+      if (value1.includes("px]")) {
+        if (lineHeightProp > 24) {
+          let value;
+          if (lineHeightProp % 4 === 0) {
+            value = lineHeightProp / 4;
+          } else {
+            value = `[${lineHeightProp}px]`;
+          }
+          return `leading-${value}`;
         }
-        return `leading-${value}`;
       }
       return "";
     }
@@ -1751,9 +1756,6 @@
   };
   var tailwindFrame = (node, obj, isJsx) => {
     const width = node.width ? `width='${node.width}px'` : "";
-    if (node.name.includes("\u7279\u6B8A\u8F93\u5165\u6846")) {
-      return pacvueInput(node);
-    }
     if (node.name.includes("widget-arrow")) {
       return pacvueIcon(node);
     }
@@ -1824,10 +1826,14 @@
     builder.size1(obj);
     builder.position(node, localTailwindSettings.optimizeLayout);
     const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible && ["RECTANGLE", "VECTOR"].includes(e.type));
+    const visibleChildNode = childrNode.filter((e) => e.visible && ["RECTANGLE", "VECTOR"].includes(e.type) || e.name.includes("\u77E9\u5F62"));
     if (visibleChildNode.length > 1) {
       visibleChildNode.forEach((e) => {
-        builder.border(e);
+        var _a;
+        const cnode = node;
+        if (((_a = retrieveTopFill(cnode.fills)) == null ? void 0 : _a.type) !== "IMAGE") {
+          builder.border(e);
+        }
       });
     }
     if (builder.attributes || builder.style) {
@@ -1859,23 +1865,38 @@
       return children;
     }
     let builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).commonPositionStyles(node, localTailwindSettings.optimizeLayout).commonShapeStyles(node);
+    let builder2 = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).commonShapeStyles(node);
     const asnode = node;
     const childrNode = commonSortChildrenWhenInferredAutoLayout(asnode, localTailwindSettings.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible && ["RECTANGLE", "VECTOR"].includes(e.type));
-    if (visibleChildNode.length == 1) {
-      builder.border(visibleChildNode[0]);
+    const visibleChildNode = childrNode.filter((e) => e.visible && ["RECTANGLE", "VECTOR"].includes(e.type) && e.name.includes("\u77E9\u5F62"));
+    if (visibleChildNode.length > 1) {
+      visibleChildNode.forEach((e) => {
+        var _a2;
+        const cnode = node;
+        if (((_a2 = retrieveTopFill(cnode.fills)) == null ? void 0 : _a2.type) !== "IMAGE") {
+          builder.border(e);
+        }
+      });
     }
     if (builder.attributes || additionalAttr) {
-      const build = builder.build(additionalAttr);
+      var build = builder.build(additionalAttr);
       let tag = "div";
       let src = "";
       if (((_a = retrieveTopFill(node.fills)) == null ? void 0 : _a.type) === "IMAGE") {
         if (!("children" in node) || node.children.length === 0) {
+          build = builder2.build(additionalAttr);
           tag = "img";
           src = ` src="https://via.placeholder.com/${node.width.toFixed(0)}x${node.height.toFixed(0)}"`;
         } else {
           builder.addAttributes(`bg-[url(https://via.placeholder.com/${node.width.toFixed(0)}x${node.height.toFixed(0)})]`);
         }
+      }
+      if (build.includes(" px-6 pt-6 pb-8")) {
+        build = build.replace(" px-6 pt-6 pb-8", "");
+        let a = build.split(" ");
+        let b = a.filter((e) => !e.includes("w-") && e != "");
+        console.log();
+        build = ' class="' + b.join(" ");
       }
       if (children) {
         return `
@@ -2153,7 +2174,8 @@
           }
         }
         comp = `
-<${ary[0]} style="margin-right: 0">${text}</${ary[0]}>`;
+<${ary[0]} style="margin-right: 0">${text}
+</${ary[0]}>`;
         break;
       case "PacvueButton":
         let type = "";
@@ -2168,11 +2190,7 @@
           }
         }
         if (ary[2]) {
-          icon = `
-<el-icon :size="20">
-  <${ary[2]}></${ary[2]}>
-</el-icon>
-`;
+          icon = `<el-icon :size="20"><${ary[2]}></${ary[2]}></el-icon>`;
         }
         if (node.height == 32) {
           size = ' size="small"';
@@ -2185,6 +2203,17 @@
 <${ary[0]} />`;
         break;
       case "PacvueRadioGroup":
+        let builder = new TailwindDefaultBuilder(node.node, localTailwindSettings.layerName, false).commonPositionStyles(node.node, localTailwindSettings.optimizeLayout).commonShapeStyles(node.node);
+        const rowColumn = tailwindAutoLayoutProps(node.node, node.node.inferredAutoLayout);
+        var build = "";
+        if (builder.attributes || rowColumn) {
+          build = builder.build(rowColumn);
+        }
+        comp = `
+<pacvue-radio-group ${build}>${tailwindWidgetGenerator(node.children, false)}
+</pacvue-radio-group>`;
+        break;
+      case "PacvueButtonTab":
         comp = `
 <pacvue-radio-group>${node.html}
 </pacvue-radio-group>`;
@@ -2205,10 +2234,7 @@
 </pacvue-tooltip>`;
         }
         comp = `
-<el-icon :size="20">
-  <${ary[1]}></${ary[1]}>
-</el-icon>
-`;
+<el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`;
         break;
       default:
         return "";
@@ -2392,7 +2418,8 @@
     "Pause": "",
     "Shopping, buybox": "PacvueIconShoppingCart",
     "Ticket \u3001coupon": "PacvueIconDiscountCoupon",
-    "Skip": "PacvueIconSkip1"
+    "Skip": "PacvueIconSkip1",
+    "IconCursorMouse/size4": ""
   };
 
   // src/worker/backend/tailwind/tailwindMain1.ts
@@ -2414,9 +2441,26 @@
     const nodeStyle = node;
     const nodeStyle1 = node;
     const nodeStyle2 = node;
-    var builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, false).blend(nodeStyle).position(node, localTailwindSettings2.optimizeLayout).customColor(nodeStyle.fills, "bg").commonPositionStyles(nodeStyle1, localTailwindSettings2.optimizeLayout).commonShapeStyles(nodeStyle2);
-    if (node.type == "TEXT") {
-      builder = new TailwindTextBuilder(node, localTailwindSettings2.layerName, false).commonPositionStyles(node, localTailwindSettings2.optimizeLayout).textAlign(node);
+    var builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, false).commonPositionStyles(nodeStyle1, localTailwindSettings2.optimizeLayout).commonShapeStyles(nodeStyle2);
+    switch (node.type) {
+      case "RECTANGLE":
+      case "ELLIPSE":
+      case "LINE":
+      case "FRAME":
+      case "COMPONENT":
+      case "INSTANCE":
+      case "COMPONENT_SET":
+        break;
+      case "GROUP":
+        builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, false).blend(node).size(node, localTailwindSettings2.optimizeLayout).position(node, localTailwindSettings2.optimizeLayout);
+        break;
+      case "TEXT":
+        let layoutBuilder = new TailwindTextBuilder(node, localTailwindSettings2.layerName, false).commonPositionStyles(node, localTailwindSettings2.optimizeLayout).textAlign(node);
+        const styledHtml = layoutBuilder.getTextSegments(node.id);
+        break;
+      case "SECTION":
+        builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, false).size(node, localTailwindSettings2.optimizeLayout).position(node, localTailwindSettings2.optimizeLayout).customColor(node.fills, "bg");
+        break;
     }
     var styleClass = uniqueArray(builder.attributes);
     let ParentObj = {
@@ -2452,7 +2496,12 @@
         }
       });
       ParentObj.height = height;
-      if ((node.height == 36 || node.height == 32) && (styleClass.includes("rounded-md") || styleClass.includes("rounded")) && styleClass.includes("border") && styleClass.includes("border-[var(--icon-disabled--)]")) {
+      if (childrenList.length > 1 && childrenList.filter((e) => e.name == "PacvueRadio").length == childrenList.length) {
+        ParentObj.type = "PACVUE";
+        ParentObj.name = "PacvueRadioGroup";
+        ParentObj.children = childrenList;
+        return ParentObj;
+      } else if (node.height < 40 && node.height > 30 && (styleClass.includes("rounded-md") || styleClass.includes("rounded")) && styleClass.includes("border") && styleClass.includes("border-[var(--icon-disabled--)]")) {
         if (node.height != node.width) {
           const newClass = styleClass.filter((e) => e != "rounded-md" && e != "rounded" && e != "border" && e != "border-[var(--icon-disabled--)]" && e != "h-9" && e != "h-8" && !e.includes("px") && !e.includes("py"));
           const arrowNum = searchByName(visibleChildNode, 0, "top bar-arrow-down");
@@ -2522,6 +2571,10 @@
         } else {
           ParentObj.children = childrenList;
         }
+      } else if (childrenList[0].name == "Input" && node.height >= 40) {
+        ParentObj.type = "PACVUE";
+        ParentObj.name = "PacvueInput-Textarea";
+        return ParentObj;
       } else if (node.name.includes("tab")) {
         ParentObj.type = "PACVUE";
         let html = "";
@@ -2530,7 +2583,7 @@
           if (childrenList.some((e2) => {
             return e2.style.includes("border");
           })) {
-            ParentObj.name = `PacvueRadioGroup`;
+            ParentObj.name = `PacvueButtonTab`;
             html += `
 <pacvue-radio-button >${text}</pacvue-radio-button>`;
           } else {
@@ -2604,9 +2657,9 @@
           ParentObj.name = "Pacvue" + pacvueChildren[0].name + (tipNum > 0 ? "-Tips" : "");
           return ParentObj;
         }
-        if (childrenList.length == 1 && styleClass.filter((e) => {
+        if (childrenList.length == 1 && styleClass.some((e) => {
           return e.includes("bg-") || e.includes("border-");
-        }).length == 0) {
+        })) {
           return childrenList[0];
         } else {
           ParentObj.children = childrenList;
@@ -3394,29 +3447,39 @@
 
   // src/worker/backend/style/styleMain.ts
   var styleMain = (sceneNode) => {
+    const n = sceneNode[0];
     const visibleSceneNode = sceneNode.filter((d) => d.visible);
     const node = visibleSceneNode[0];
     let builder;
-    if (node.type == "TEXT") {
-      builder = new HtmlTextBuilder(node, false, false).commonPositionStyles(node, true).textAlign(node);
-      const styledHtml = builder.getTextSegments(node.id);
-      var html = "";
-      for (let i of styledHtml) {
-        if (i.text && i.text != " ") {
-          const arr = i.style.split("; ");
-          let css = arr.join(";\n  ");
-          html += `${i.text} {
+    let style = "";
+    switch (node.type) {
+      case "TEXT":
+        builder = new HtmlTextBuilder(node, false, false).commonPositionStyles(node, true).textAlign(node);
+        const styledHtml = builder.getTextSegments(node.id);
+        for (let i of styledHtml) {
+          if (i.text && i.text != " ") {
+            const arr = i.style.split("; ");
+            let css = arr.join(";\n  ");
+            style += `${i.text} {
   ${css}
 }
 `;
+          }
         }
-      }
-      return html;
-    } else {
-      builder = new HtmlDefaultBuilder(node, false, false).commonPositionStyles(node, true).commonShapeStyles(node);
-      const style = builder.styles.join(";\n");
-      return style;
+        break;
+      case "GROUP":
+        builder = new HtmlDefaultBuilder(node, false, false).commonPositionStyles(node, true);
+        style = builder.styles.join(";\n");
+        break;
+      default:
+        builder = new HtmlDefaultBuilder(node, false, false).commonPositionStyles(node, true).commonShapeStyles(node);
+        style = builder.styles.join(";\n");
+        break;
     }
+    if (node.type == "TEXT") {
+    } else {
+    }
+    return style;
   };
 
   // src/worker/backend/code.ts
@@ -3520,7 +3583,6 @@
       }
       if (msg.type === "pluginSettingChanged") {
         userPluginSettings[msg.key] = msg.value;
-        console.log(userPluginSettings, msg.key, msg.value);
         figma.clientStorage.setAsync("userPluginSettings", userPluginSettings);
         safeRun(userPluginSettings);
       }

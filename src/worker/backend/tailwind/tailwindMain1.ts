@@ -23,8 +23,7 @@ type ChildNodeObj = {
   style: string[];
 };
 export let localTailwindSettings: PluginSettings;
-export const tailwindMain1 = (sceneNode: Array<SceneNode>,
-  settings: PluginSettings) => {
+export const tailwindMain1 = (sceneNode: Array<SceneNode>, settings: PluginSettings) => {
   localTailwindSettings = settings;
   let result = tailwindWidgetGenerator(sceneNode);
   return result;
@@ -43,13 +42,35 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
   const nodeStyle1 = node as SceneNode & SceneNodeMixin & BlendMixin & LayoutMixin & MinimalBlendMixin
   const nodeStyle2 = node as GeometryMixin & BlendMixin & SceneNode
   var builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false)
-  .blend(nodeStyle)
-  .position(node, localTailwindSettings.optimizeLayout)
-  .customColor(nodeStyle.fills, "bg")
   .commonPositionStyles(nodeStyle1, localTailwindSettings.optimizeLayout)
   .commonShapeStyles(nodeStyle2);
-  if(node.type == 'TEXT'){
-    builder = new TailwindTextBuilder(node, localTailwindSettings.layerName, false).commonPositionStyles(node, localTailwindSettings.optimizeLayout).textAlign(node);
+  switch (node.type) {
+    case "RECTANGLE":
+    case "ELLIPSE":
+    case "LINE":
+    case "FRAME":
+    case "COMPONENT":
+    case "INSTANCE":
+    case "COMPONENT_SET":
+      break;
+    case "GROUP":
+      builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false)
+        .blend(node)
+        .size(node, localTailwindSettings.optimizeLayout)
+        .position(node, localTailwindSettings.optimizeLayout);
+      break;
+    case "TEXT":
+     let layoutBuilder = new TailwindTextBuilder(node, localTailwindSettings.layerName, false)
+        .commonPositionStyles(node, localTailwindSettings.optimizeLayout)
+        .textAlign(node);
+        const styledHtml = layoutBuilder.getTextSegments(node.id);
+      break;
+    case "SECTION":
+      builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false)
+        .size(node, localTailwindSettings.optimizeLayout)
+        .position(node, localTailwindSettings.optimizeLayout)
+        .customColor(node.fills, "bg");
+      break;
   }
   var styleClass = uniqueArray(builder.attributes)
   let ParentObj: ParentNodeObj = {
@@ -85,8 +106,14 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
       }
     })
     ParentObj.height = height
-    if(
-      (node.height == 36 || node.height == 32)&&
+    if(childrenList.length > 1 && childrenList.filter(e=>e.name == 'PacvueRadio').length == childrenList.length){
+      ParentObj.type = 'PACVUE';
+      ParentObj.name = 'PacvueRadioGroup';
+      ParentObj.children = childrenList
+      return ParentObj
+    }else if(
+      node.height < 40 &&
+      node.height > 30 &&
       (styleClass.includes('rounded-md') || styleClass.includes('rounded')) &&
       styleClass.includes("border") &&
       styleClass.includes('border-[var(--icon-disabled--)]')
@@ -161,6 +188,10 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
       }else{
         ParentObj.children = childrenList
       }
+    } else if(childrenList[0].name == 'Input' && node.height >= 40){
+      ParentObj.type = 'PACVUE';
+      ParentObj.name = 'PacvueInput-Textarea';
+      return ParentObj
     } else if (node.name.includes('tab')) {
       ParentObj.type = 'PACVUE';
       let html = ''
@@ -169,7 +200,7 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
         if(childrenList.some(e=>{
           return e.style.includes('border')
         })){
-          ParentObj.name = `PacvueRadioGroup`;
+          ParentObj.name = `PacvueButtonTab`;
           html += `\n<pacvue-radio-button >${ text }</pacvue-radio-button>`
         }else{
           ParentObj.name = `PacvueTab`;
@@ -246,9 +277,7 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
         ParentObj.name = 'Pacvue' + pacvueChildren[0].name + (tipNum > 0 ? '-Tips' : '');
         return ParentObj
       }
-      if(childrenList.length == 1 && styleClass.filter(e=>{
-        return e.includes('bg-') || e.includes('border-')
-      }).length == 0){
+      if(childrenList.length == 1 && styleClass.some(e=>{ return e.includes('bg-') || e.includes('border-') })){
         return childrenList[0]
       }else{
         ParentObj.children = childrenList

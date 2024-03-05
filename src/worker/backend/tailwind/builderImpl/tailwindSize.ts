@@ -1,5 +1,6 @@
 import { pxToLayoutSize } from "../conversionTables";
 import { nodeSize } from "../../common/nodeWidthHeight";
+import { commonIsAbsolutePosition } from "../../common/commonPosition";
 import { formatWithJSX } from "../../common/parseJSX";
 
 export const tailwindSizePartial = (
@@ -30,7 +31,9 @@ export const tailwindSizePartial = (
 
   let h = "";
   if (typeof size.height === "number") {
-    h = `h-${pxToLayoutSize(size.height)}`;
+    if(commonIsAbsolutePosition(node, optimizeLayout)){
+      h = `h-${pxToLayoutSize(size.height)}`;
+    }
   } else if (size.height === "fill") {
     if (
       size.height === "fill" &&
