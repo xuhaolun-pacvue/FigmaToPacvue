@@ -4,7 +4,7 @@ import { TailwindDefaultBuilder } from "./tailwindDefaultBuilder";
 import { TailwindTextBuilder } from "./tailwindTextBuilder";
 import { svgIcon } from "./PacvueIcon";
 import { tailwindAutoLayoutProps } from "./builderImpl/tailwindAutoLayout";
-type ParentNodeObj = {
+type NodeObj = {
   type: string;
   name: string;
   node: SceneNode;
@@ -13,15 +13,6 @@ type ParentNodeObj = {
   html: string;
   style: string[];
   children: any[];
-};
-type ChildNodeObj = {
-  type: string;
-  name: string;
-  node: SceneNode;
-  width: number;
-  height: number;
-  html: string;
-  style: string[];
 };
 export let localTailwindSettings: PluginSettings;
 export const tailwindMain1 = (sceneNode: Array<SceneNode>, settings: PluginSettings) => {
@@ -38,45 +29,10 @@ const tailwindWidgetGenerator = (sceneNode: Array<SceneNode>) => {
   });
   return array
 }
-const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
-  const nodeStyle = node as SceneNode & SceneNodeMixin & MinimalBlendMixin & LayoutMixin
-  const nodeStyle1 = node as SceneNode & SceneNodeMixin & BlendMixin & LayoutMixin & MinimalBlendMixin
-  const nodeStyle2 = node as GeometryMixin & BlendMixin & SceneNode
-  var builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false)
-  .commonPositionStyles(nodeStyle1, localTailwindSettings.optimizeLayout)
-  .commonShapeStyles(nodeStyle2);
-  switch (node.type) {
-    case "RECTANGLE":
-    case "ELLIPSE":
-    case "LINE":
-    case "FRAME":
-    case "COMPONENT":
-    case "INSTANCE":
-    case "COMPONENT_SET":
-      break;
-    case "GROUP":
-      builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false)
-        .blend(node)
-        .size(node, localTailwindSettings.optimizeLayout)
-        .position(node, localTailwindSettings.optimizeLayout);
-      break;
-    case "TEXT":
-     let layoutBuilder = new TailwindTextBuilder(node, localTailwindSettings.layerName, false)
-        .commonPositionStyles(node, localTailwindSettings.optimizeLayout)
-        .textAlign(node);
-        const styledHtml = layoutBuilder.getTextSegments(node.id);
-      break;
-    case "SECTION":
-      builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false)
-        .size(node, localTailwindSettings.optimizeLayout)
-        .position(node, localTailwindSettings.optimizeLayout)
-        .customColor(node.fills, "bg");
-      break;
-  }
-  var layoutBuilder = tailwindAutoLayoutProps(node, node)
-  var build = [...builder.attributes, ...layoutBuilder.split(" ")]
-  var styleClass = uniqueArray(build)
-  let ParentObj: ParentNodeObj = {
+const tailwindContainer = (node: SceneNode ): NodeObj =>{
+  const nodeStyle = node as SceneNode & SceneNodeMixin & BlendMixin & LayoutMixin & GeometryMixin & MinimalBlendMixin
+  var styleClass = getStyle(nodeStyle)
+  let ParentObj: NodeObj = {
     type: node.type,
     name: node.name,
     node: node,
@@ -85,15 +41,6 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
     style: styleClass,
     html: '',
     children: []
-  }
-  let ChildObj: ChildNodeObj = {
-    type: node.type,
-    name: node.name,
-    node: node,
-    width: node.width,
-    height: node.height,
-    style: styleClass,
-    html: '',
   }
   const n = node as SceneNode & ChildrenMixin
   if(n.children){
@@ -109,18 +56,20 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
       }
     })
     ParentObj.height = height
+
+    if (childrenList.some(e=> ['多选框', 'Checkbox'].includes(e.name))){
+      ParentObj.type = 'PACVUE';
+      ParentObj.name = 'PacvueCheckbox';
+    } else if (childrenList.some(e=> ['单选框', 'Radio'].includes(e.name))){
+      ParentObj.type = 'PACVUE';
+      ParentObj.name = 'PacvueRadio';
+    } 
+
     if(childrenList.length > 1 && childrenList.filter(e=>e.name == 'PacvueRadio').length == childrenList.length){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueRadioGroup';
       ParentObj.children = childrenList
-      return ParentObj
-    }else if(
-      node.height < 40 &&
-      node.height > 30 &&
-      (styleClass.includes('rounded-md') || styleClass.includes('rounded')) &&
-      styleClass.includes("border") &&
-      styleClass.includes('border-[var(--icon-disabled--)]')
-    ){
+    } else if (node.height < 40 && node.height > 30 && (styleClass.includes('rounded-md') || styleClass.includes('rounded')) && styleClass.includes("border") && styleClass.includes('border-[var(--icon-disabled--)]')){
       /* 通过样式判断是否是选框 */
       if(node.height != node.width){
         const newClass = styleClass.filter(e=>e != 'rounded-md' && e != 'rounded' && e != 'border' && e != 'border-[var(--icon-disabled--)]' && e != 'h-9' && e != 'h-8' && !e.includes('px') && !e.includes('py'))
@@ -167,50 +116,38 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
           icon += (svgIcon as { [key: string]: string })[a.trim()];
         }
         ParentObj.name = `PacvueButton-${icon}`;
-        return ParentObj;
       }
     } else if ((node.height == node.width && node.height == 18) || node.name == '多选框'){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'Checkbox';
-      return ParentObj
+
     } else if ((node.height == node.width && node.height == 20 && styleClass.includes("border")) || node.name == '单选框'){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'Radio';
-      return ParentObj
-    } else if (childrenList.some(e=>{
-      return ['top bar-arrow-down','PacvueIcon-PacvueIconTopBarArrowDown'].includes(e.name)
-    })){
-      
+    } else if (childrenList.some(e=>['top bar-arrow-down','PacvueIcon-PacvueIconTopBarArrowDown'].includes(e.name))){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueDropdown';
       ParentObj.children = childrenList
-      return ParentObj
     } else if (node.name == '开关'){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueSwitch';
-      return ParentObj
     } else if (node.name == '文本域'){
-      if(childrenList.filter(e=>{
-        return e.name == '文本域' || e.name == 'PacvueInput-Textarea'
-      }).length == 0){
+      if (childrenList.some(e=>['文本域','PacvueInput-Textarea'].includes(e.name))){
         ParentObj.type = 'PACVUE';
         ParentObj.name = 'PacvueInput-Textarea';
-        return ParentObj
-      }else{
-        ParentObj.children = childrenList
+      } else {
+        ParentObj.children = childrenList;
       }
-    } else if(node.name == '搜索框'){
+    } else if (node.name == '搜索框'){
       let slot = '-prefix'
       if(childrenList.length == 1 && childrenList[0].name == 'Search在后'){
         slot = '-append'
       }
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueInput-Search' + slot;
-      return ParentObj
-    } else if(childrenList.length == 1 && childrenList[0].name == 'Input' && node.height >= 40){
+    } else if (childrenList.length == 1 && childrenList[0].name == 'Input' && node.height >= 40){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueInput-Textarea';
-      return ParentObj
     } else if (node.name.includes('tab')) {
       ParentObj.type = 'PACVUE';
       let html = ''
@@ -227,13 +164,7 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
         }
       })
       ParentObj.html = html
-      return ParentObj
-    } else if (
-      (node.name.includes('主要按钮') || node.name.includes('次级按钮')) || (
-      (node.height == 36 || node.height == 32) && 
-      styleClass.includes("border") &&
-      styleClass.includes("border-[var(--el-color-primary)]")
-    )) {
+    } else if ((node.name.includes('主要按钮') || node.name.includes('次级按钮')) || ((node.height == 36 || node.height == 32) && styleClass.includes("border") &&styleClass.includes("border-[var(--el-color-primary)]"))) {
       ParentObj.type = 'PACVUE';
       let icon = '-';
       const iconList = visibleChildNode.filter(e => {
@@ -256,7 +187,6 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
         type = 'primary'
       }
       ParentObj.name = `PacvueButton-${type}${icon}`;
-      return ParentObj;
     } else if (node.name.includes('灰色按钮') || node.name.toLocaleLowerCase().includes('button')) {
       ParentObj.type = 'PACVUE';
       let name = 'PacvueButton'
@@ -268,45 +198,21 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
         type = 'plain'
       }
       ParentObj.name = `${name}-${type}`;
-      return ParentObj
     } else if (node.width == node.height && node.width < 26 && (node.type == 'INSTANCE' || childrenList.some(e=>e.name == 'Union'))){
       ParentObj.type = 'PACVUE';
       const a: string = node.name;
       let icon = (svgIcon as { [key: string]: string })[a.trim()];
       ParentObj.name = `PacvueIcon-${icon}`;
-      return ParentObj;
-    } else{
-      const pacvueChildren = childrenList.filter(e=>e.type == 'PACVUE')
-      if(childrenList.length == 1 && pacvueChildren.length == 1){
-        return childrenList[0]
-      }
-      if(pacvueChildren.length > 0 && ['Checkbox', 'Radio'].includes(pacvueChildren[0].name)){
-        const tipNum = searchByName(visibleChildNode, 0, 'tips-exclamation')
-        var textLength = searchByType(visibleChildNode, 0, 'TEXT')
-        var textArr: string[] = []
-        if(textLength > 0){
-          const tipNode = getNodeByType(visibleChildNode, [], 'TEXT')
-          tipNode.forEach(e=>{
-            const n = e as TextNode
-            textArr.push(tailwindText(n, false))
-          })
-        }
-        ParentObj.html = textArr.join(' ')
-        ParentObj.type = 'PACVUE';
-        ParentObj.name = 'Pacvue' + pacvueChildren[0].name + (tipNum > 0 ? '-Tips' : '');
-        return ParentObj
-      }
-      if(childrenList.length == 1 && styleClass.some(e=>{ return e.includes('bg-') || e.includes('border-') })){
-        return childrenList[0]
-      }else{
-        ParentObj.children = childrenList
-      }
     }
-    return ParentObj
-  }else{
-    return ChildObj
-  }
 
+    const pacvueChildren = childrenList.filter(e=>e.type == 'PACVUE')
+    if(childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some(e=>{ return e.includes('bg-') || e.includes('border-') || e.includes('grow') }))){
+      return childrenList[0]
+    }else{
+      ParentObj.children = childrenList
+    }
+  }
+  return ParentObj
 }
 const uniqueArray = (array: string[]): string[] => {
   let arr1: string[] = [];
@@ -374,16 +280,41 @@ const getChildrenAllText = (nodeList: SceneNode[], arr: string[]): string[]=>{
   })
   return arr
 }
-const tailwindText = (node: TextNode, isJsx: boolean): string => {
-  let layoutBuilder = new TailwindTextBuilder(node, localTailwindSettings.layerName, isJsx).commonPositionStyles(node, localTailwindSettings.optimizeLayout).textAlign(node);
-  const styledHtml = layoutBuilder.getTextSegments(node.id);
-
-  let content = "";
-  if (styledHtml.length === 1) {
-    layoutBuilder.addAttributes(styledHtml[0].style);
-    content = styledHtml[0].text;
-  } else {
-    content = styledHtml.map((style) => `<span class="${style.style}">${style.text}</span>`).join("");
+const getStyle = (node: SceneNode & SceneNodeMixin & BlendMixin & LayoutMixin & GeometryMixin & MinimalBlendMixin): string[] =>{
+  var builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false)
+  .commonPositionStyles(node, localTailwindSettings.optimizeLayout)
+  .commonShapeStyles(node);
+  switch (node.type) {
+    case "RECTANGLE":
+    case "ELLIPSE":
+    case "LINE":
+    case "FRAME":
+    case "COMPONENT":
+    case "INSTANCE":
+    case "COMPONENT_SET":
+      break;
+    case "GROUP":
+      builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false)
+        .blend(node)
+        .size(node, localTailwindSettings.optimizeLayout)
+        .position(node, localTailwindSettings.optimizeLayout);
+      break;
+    case "TEXT":
+     let layoutBuilder = new TailwindTextBuilder(node, localTailwindSettings.layerName, false)
+        .commonPositionStyles(node, localTailwindSettings.optimizeLayout)
+        .textAlign(node);
+        const styledHtml = layoutBuilder.getTextSegments(node.id);
+      break;
+    case "SECTION":
+      builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false)
+        .size(node, localTailwindSettings.optimizeLayout)
+        .position(node, localTailwindSettings.optimizeLayout)
+        .customColor(node.fills, "bg");
+      break;
   }
-  return `\n<div${layoutBuilder.build()}>${content}</div>`;
-};
+  const node1 = node as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
+  var layoutBuilder = tailwindAutoLayoutProps(node, node1)
+  var build = [...builder.attributes, ...layoutBuilder.split(" ")]
+  var styleClass =  uniqueArray(build)
+  return styleClass
+}

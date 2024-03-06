@@ -20,6 +20,7 @@ export const tailwindMain = (
   localTailwindSettings = settings;
   previousExecutionCache = [];
   // 生成 Tailwind 控件
+    console.log('---', sceneNode)
   let result = tailwindWidgetGenerator(sceneNode, localTailwindSettings.jsx);
 
   // 移除容器中生成的初始换行符
@@ -44,6 +45,8 @@ const tailwindWidgetGenerator = (sceneNode: any[], isJsx: boolean): string => {
     //     return
     //   }
     // }
+  if(e.name == 'Frame 682'){
+  }
     switch (e.type) {
 			case "PACVUE":
 				comp += pacvueContainer(e)
@@ -83,15 +86,6 @@ const tailwindFrame = (
   isJsx: boolean
 ): string => {
   const width = node.width ? `width='${node.width}px'` : ''
-  if(node.name.includes('widget-arrow')){
-    return pacvueIcon(node)
-  }
-  if(node.name.includes('tab')){
-    return pacvueTab(node, isJsx)
-  }
-  if(node.name.includes('主要按钮') || node.name.includes('灰色按钮')  || node.name.includes('次级按钮') || node.name.toLocaleLowerCase().includes('button') ){
-    return pacvueButton(node, isJsx)
-  }
   const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout)
   if(node.name == '单选框+文字'){
     return tailwindWidgetGenerator(obj.children, isJsx);
@@ -124,17 +118,15 @@ const tailwindFrame = (
     return pacvueIcon(node)
   }
   const childrenStr = tailwindWidgetGenerator(obj.children, isJsx);
-  if (node.layoutMode !== "NONE") {
-    const rowColumn = tailwindAutoLayoutProps(node, node);
-    return tailwindContainer(node, childrenStr, rowColumn, isJsx);
-  } else {
-    if (localTailwindSettings.optimizeLayout && node.inferredAutoLayout !== null) {
-      const rowColumn = tailwindAutoLayoutProps(node, node.inferredAutoLayout);
-      return tailwindContainer(node, childrenStr, rowColumn, isJsx);
+  var rowColumn = ''
+  if(obj.children.length > 1){
+    if (node.layoutMode !== "NONE") {
+      rowColumn = tailwindAutoLayoutProps(node, node);
+    } else if (localTailwindSettings.optimizeLayout && node.inferredAutoLayout !== null) {
+      rowColumn = tailwindAutoLayoutProps(node, node.inferredAutoLayout);
     }
-    
-    return tailwindContainer(node, childrenStr, "", isJsx);
   }
+  return tailwindContainer(node, childrenStr, rowColumn, isJsx);
 };
 const tailwindGroup = (obj: any, isJsx: boolean = false): string => {
   // 忽略尺寸为零或更小的视图
@@ -222,7 +214,6 @@ export const tailwindContainer = (node: SceneNode & SceneNodeMixin & BlendMixin 
       build = build.replace(' px-6 pt-6 pb-8', "")
       let a = build.split(' ')
       let b = a.filter(e=> !e.includes('w-')&& e != "")
-      console.log()
       build = ' class="' + b.join(" ")
     }
     if (children) {
@@ -263,39 +254,6 @@ export const tailwindCodeGenTextStyles = () => {
 
 
 /* Pacvue相关 */
-const pacvueButton =  (obj: any, isJsx: boolean): string => {
-  const node = obj.node as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
-  let type = ' type="primary"'
-  if(node.name.includes('灰色按钮')){
-    type = ''
-  }
-  if(node.name.includes('次级按钮')){
-    type = ' type="primary" plain'
-  }
-  let index = 0
-  let text = ''
-  let icon = ''
-  let width = node.width ? `width='${node.width}px'` : ''
-  if(obj.children.length == 1 && obj.children[0].type != 'TEXT'){
-    return tailwindWidgetGenerator(obj.children, isJsx);
-  }
-  for(let e of obj.children){
-    index ++
-    if(e.type == 'TEXT'){
-      text = e.node.characters
-      break
-    }
-  }
-  if(obj.children.length > 1){
-    if(index > 1){
-      icon = `\n<el-icon :size="20" style="margin-right: 8px">\n  <PacvueIconAdd></PacvueIconAdd>\n</el-icon>`
-    }
-    if(index < obj.children.length){
-      return `\n<pacvue-dropdown>\n  <template #reference>\n    <pacvue-button type="primary" plain>\n      ${icon}${text}\n      <el-icon :size="20" style="margin-left: 8px">\n        <PacvueIconTopBarArrowDown></PacvueIconTopBarArrowDown>\n      </el-icon>\n    </pacvue-button>\n  </template>\n</pacvue-dropdown>`
-    }
-  }
-  return `\n<pacvue-button${type} ${width}>${icon}${text}</pacvue-button>`
-}
 const pacvueInput = (node: FrameNode | InstanceNode | ComponentNode | ComponentSetNode): string => {
   let width = node.width ? `width='${node.width}px'` : ''
   let textarea = ''
@@ -342,26 +300,6 @@ const pacvueIcon = (node: FrameNode | InstanceNode | ComponentNode | ComponentSe
     return `\n<pacvue-tooltip placement="top" effect="dark">\n  <template #content>\n    <div><!-- Tooltip文案 --></div>\n  </template>\n  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>`
   }
   return `\n<el-icon :size="${node.width}">\n  <${iconName} />\n</el-icon>`;
-}
-const pacvueTab = (node: FrameNode | InstanceNode | ComponentNode | ComponentSetNode,
-  isJsx: boolean):string => {
-  const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout)
-  const visibleChildNode = childrNode.filter((e: SceneNode) => e.visible);
-  let comp = ""
-  visibleChildNode.forEach((n) => {
-    const textNode = n as FrameNode | InstanceNode | ComponentNode | ComponentSetNode
-    let text = findSpecifiedChiuldren(commonSortChildrenWhenInferredAutoLayout(textNode, localTailwindSettings.optimizeLayout), isJsx)
-    if(node.name.includes('水平方向')){
-      comp += `\n  <el-tab-pane label="${text}"></el-tab-pane>`
-    }else{
-      comp += `\n  <pacvue-radio-button >${text}</pacvue-radio-button>`
-    }
-  })
-  if(node.name.includes('水平方向')){
-    return `\n<PacvueTab tab-position="top">${comp}\n</PacvueTab>`
-  }else{
-    return `\n<pacvue-radio-group>${comp}\n</pacvue-radio-group>`
-  }
 }
 const findSpecifiedChiuldren = ( sceneNode: ReadonlyArray<SceneNode>, isJsx: boolean ): string => {
   let comp = "";
@@ -437,15 +375,14 @@ const pacvueContainer = (node:any): string=>{
 			break
 		case 'PacvueCheckbox':
 		case 'PacvueRadio':
-			let tootip = ""
-			let text = node.html
-			if(ary[1]){
-				if(ary[1] == 'Tips') {
-					tootip = `\n<pacvue-tooltip placement="top" effect="dark">\n  <template #content>\n    <div><!-- Tooltip文案 --></div>\n  </template>\n  <el-icon :size="20" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>\n`
-					text = `\n  <div class="flex items-center">${text}${tootip}\n  </div>\n`
-				}
+			const list = node.children.filter((e: any)=>e.type != 'PACVUE')
+			const text = tailwindWidgetGenerator(list, false)
+			const line = text.split("\n")
+			if(line.length > 6){
+				comp = `\n<${ary[0]} style="margin-right: 0"></${ary[0]}>${text}`
+			}else{
+				comp = `\n<${ary[0]} style="margin-right: 0">${text}\n</${ary[0]}>`
 			}
-			comp = `\n<${ary[0]} style="margin-right: 0">${text}\n</${ary[0]}>`
 			break
 		case 'PacvueButton':
       let type = ""

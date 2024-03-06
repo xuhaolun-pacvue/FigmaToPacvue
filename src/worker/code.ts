@@ -60,9 +60,8 @@ const safeRun = (settings: PluginSettings) => {
   try {
     run(settings);
   } catch (e) {
-    console.error(e)
+    console.error((e as any).message + '\n' + (e as any).stack)
     if (e && typeof e === "object" && "message" in e) {
-      console.log("error1: ", (e as any).stack);
       figma.ui.postMessage({
         type: "error",
         data: e.message,
