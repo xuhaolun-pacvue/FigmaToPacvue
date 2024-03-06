@@ -89,9 +89,6 @@ const tailwindFrame = (
   if(node.name.includes('tab')){
     return pacvueTab(node, isJsx)
   }
-  if(node.name == '搜索框'){
-    return `\n<pacvue-input ${width}>\n  <template #prefix>\n    <el-icon><PacvueIconSearch /></el-icon>\n  </template>\n</pacvue-input>`
-  }
   if(node.name.includes('主要按钮') || node.name.includes('灰色按钮')  || node.name.includes('次级按钮') || node.name.toLocaleLowerCase().includes('button') ){
     return pacvueButton(node, isJsx)
   }
@@ -425,7 +422,7 @@ const pacvueContainer = (node:any): string=>{
 					let rows = node.height ? ` :rows="${((node.height-10) / 21).toFixed(0)}"` : ''
 					endTag = ' type="textarea"' + rows + '/>'
 				}else if(ary[1] == 'Search') {
-					endTag = ` >\n  <template #prefix>\n    <el-icon><PacvueIconSearch /></el-icon>\n  </template>\n</${ary[0]}>`
+					endTag = ` >\n  <template #${ary[2]}>\n    <el-icon><PacvueIconSearch /></el-icon>\n  </template>\n</${ary[0]}>`
 				}else if(ary[1] == '%') {
 					endTag = ` >\n  <template #suffix>\n    <span>${ary[1]}</span>\n  </template>\n</${ary[0]}>`
 				}else{
@@ -493,6 +490,10 @@ const pacvueContainer = (node:any): string=>{
         return `\n<pacvue-tooltip placement="top" effect="dark">\n  <template #content>\n    <div><!-- Tooltip文案 --></div>\n  </template>\n  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>`
       }
       comp = `\n<el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`
+      break
+    case 'PacvueDropdown':
+      const buildClass = node.style.join(" ")
+      comp = `\n<pacvue-dropdown>\n  <template #reference>\n<div class="${buildClass}">    ${tailwindWidgetGenerator(node.children, false)}\n  </div>\n</template>\n</pacvue-dropdown>`
       break
 		default:
 			return ''

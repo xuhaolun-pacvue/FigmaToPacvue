@@ -1762,14 +1762,6 @@
     if (node.name.includes("tab")) {
       return pacvueTab(node, isJsx);
     }
-    if (node.name == "\u641C\u7D22\u6846") {
-      return `
-<pacvue-input ${width}>
-  <template #prefix>
-    <el-icon><PacvueIconSearch /></el-icon>
-  </template>
-</pacvue-input>`;
-    }
     if (node.name.includes("\u4E3B\u8981\u6309\u94AE") || node.name.includes("\u7070\u8272\u6309\u94AE") || node.name.includes("\u6B21\u7EA7\u6309\u94AE") || node.name.toLocaleLowerCase().includes("button")) {
       return pacvueButton(node, isJsx);
     }
@@ -2127,7 +2119,7 @@
             endTag = ' type="textarea"' + rows + "/>";
           } else if (ary[1] == "Search") {
             endTag = ` >
-  <template #prefix>
+  <template #${ary[2]}>
     <el-icon><PacvueIconSearch /></el-icon>
   </template>
 </${ary[0]}>`;
@@ -2235,6 +2227,16 @@
         }
         comp = `
 <el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`;
+        break;
+      case "PacvueDropdown":
+        const buildClass = node.style.join(" ");
+        comp = `
+<pacvue-dropdown>
+  <template #reference>
+<div class="${buildClass}">    ${tailwindWidgetGenerator(node.children, false)}
+  </div>
+</template>
+</pacvue-dropdown>`;
         break;
       default:
         return "";
@@ -2419,6 +2421,7 @@
     "Shopping, buybox": "PacvueIconShoppingCart",
     "Ticket \u3001coupon": "PacvueIconDiscountCoupon",
     "Skip": "PacvueIconSkip1",
+    "top bar-arrow-down": "PacvueIconTopBarArrowDown",
     "IconCursorMouse/size4": ""
   };
 
@@ -2455,14 +2458,16 @@
         builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, false).blend(node).size(node, localTailwindSettings2.optimizeLayout).position(node, localTailwindSettings2.optimizeLayout);
         break;
       case "TEXT":
-        let layoutBuilder = new TailwindTextBuilder(node, localTailwindSettings2.layerName, false).commonPositionStyles(node, localTailwindSettings2.optimizeLayout).textAlign(node);
-        const styledHtml = layoutBuilder.getTextSegments(node.id);
+        let layoutBuilder2 = new TailwindTextBuilder(node, localTailwindSettings2.layerName, false).commonPositionStyles(node, localTailwindSettings2.optimizeLayout).textAlign(node);
+        const styledHtml = layoutBuilder2.getTextSegments(node.id);
         break;
       case "SECTION":
         builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, false).size(node, localTailwindSettings2.optimizeLayout).position(node, localTailwindSettings2.optimizeLayout).customColor(node.fills, "bg");
         break;
     }
-    var styleClass = uniqueArray(builder.attributes);
+    var layoutBuilder = tailwindAutoLayoutProps(node, node);
+    var build = [...builder.attributes, ...layoutBuilder.split(" ")];
+    var styleClass = uniqueArray(build);
     let ParentObj = {
       type: node.type,
       name: node.name,
@@ -2557,6 +2562,13 @@
         ParentObj.type = "PACVUE";
         ParentObj.name = "Radio";
         return ParentObj;
+      } else if (childrenList.some((e) => {
+        return ["top bar-arrow-down", "PacvueIcon-PacvueIconTopBarArrowDown"].includes(e.name);
+      })) {
+        ParentObj.type = "PACVUE";
+        ParentObj.name = "PacvueDropdown";
+        ParentObj.children = childrenList;
+        return ParentObj;
       } else if (node.name == "\u5F00\u5173") {
         ParentObj.type = "PACVUE";
         ParentObj.name = "PacvueSwitch";
@@ -2571,7 +2583,15 @@
         } else {
           ParentObj.children = childrenList;
         }
-      } else if (childrenList[0].name == "Input" && node.height >= 40) {
+      } else if (node.name == "\u641C\u7D22\u6846") {
+        let slot = "-prefix";
+        if (childrenList.length == 1 && childrenList[0].name == "Search\u5728\u540E") {
+          slot = "-append";
+        }
+        ParentObj.type = "PACVUE";
+        ParentObj.name = "PacvueInput-Search" + slot;
+        return ParentObj;
+      } else if (childrenList.length == 1 && childrenList[0].name == "Input" && node.height >= 40) {
         ParentObj.type = "PACVUE";
         ParentObj.name = "PacvueInput-Textarea";
         return ParentObj;
@@ -2630,7 +2650,7 @@
         }
         ParentObj.name = `${name}-${type2}`;
         return ParentObj;
-      } else if (node.width == node.height && node.width < 26 && node.type == "INSTANCE") {
+      } else if (node.width == node.height && node.width < 26 && (node.type == "INSTANCE" || childrenList.some((e) => e.name == "Union"))) {
         ParentObj.type = "PACVUE";
         const a = node.name;
         let icon = svgIcon[a.trim()];
@@ -2673,7 +2693,7 @@
   var uniqueArray = (array) => {
     let arr1 = [];
     array.forEach((value) => {
-      if (!arr1.includes(value)) {
+      if (!arr1.includes(value) && value && value != " ") {
         arr1.push(value);
       }
     });

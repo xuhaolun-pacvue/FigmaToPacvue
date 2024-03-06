@@ -3,6 +3,7 @@ import { PluginSettings } from "../code";
 import { TailwindDefaultBuilder } from "./tailwindDefaultBuilder";
 import { TailwindTextBuilder } from "./tailwindTextBuilder";
 import { svgIcon } from "./PacvueIcon";
+import { tailwindAutoLayoutProps } from "./builderImpl/tailwindAutoLayout";
 type ParentNodeObj = {
   type: string;
   name: string;
@@ -72,7 +73,9 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
         .customColor(node.fills, "bg");
       break;
   }
-  var styleClass = uniqueArray(builder.attributes)
+  var layoutBuilder = tailwindAutoLayoutProps(node, node)
+  var build = [...builder.attributes, ...layoutBuilder.split(" ")]
+  var styleClass = uniqueArray(build)
   let ParentObj: ParentNodeObj = {
     type: node.type,
     name: node.name,
@@ -174,6 +177,14 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'Radio';
       return ParentObj
+    } else if (childrenList.some(e=>{
+      return ['top bar-arrow-down','PacvueIcon-PacvueIconTopBarArrowDown'].includes(e.name)
+    })){
+      
+      ParentObj.type = 'PACVUE';
+      ParentObj.name = 'PacvueDropdown';
+      ParentObj.children = childrenList
+      return ParentObj
     } else if (node.name == '开关'){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueSwitch';
@@ -188,7 +199,15 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
       }else{
         ParentObj.children = childrenList
       }
-    } else if(childrenList[0].name == 'Input' && node.height >= 40){
+    } else if(node.name == '搜索框'){
+      let slot = '-prefix'
+      if(childrenList.length == 1 && childrenList[0].name == 'Search在后'){
+        slot = '-append'
+      }
+      ParentObj.type = 'PACVUE';
+      ParentObj.name = 'PacvueInput-Search' + slot;
+      return ParentObj
+    } else if(childrenList.length == 1 && childrenList[0].name == 'Input' && node.height >= 40){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueInput-Textarea';
       return ParentObj
@@ -250,7 +269,7 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
       }
       ParentObj.name = `${name}-${type}`;
       return ParentObj
-    } else if (node.width == node.height && node.width < 26 && node.type == 'INSTANCE'){
+    } else if (node.width == node.height && node.width < 26 && (node.type == 'INSTANCE' || childrenList.some(e=>e.name == 'Union'))){
       ParentObj.type = 'PACVUE';
       const a: string = node.name;
       let icon = (svgIcon as { [key: string]: string })[a.trim()];
@@ -292,7 +311,7 @@ const tailwindContainer = (node: SceneNode ): ParentNodeObj | ChildNodeObj =>{
 const uniqueArray = (array: string[]): string[] => {
   let arr1: string[] = [];
   array.forEach((value) => {
-    if (!arr1.includes(value)) {
+    if (!arr1.includes(value) && value && value != " ") {
       arr1.push(value);
     }
   });
