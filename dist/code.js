@@ -616,7 +616,7 @@
     if ("all" in radius) {
       if (radius.all === 0) {
         return "";
-      } else if (radius.all > 999 && node.width < 1e3 && node.height < 1e3) {
+      } else if (radius.all >= 999 && node.width < 1e3 && node.height < 1e3) {
         return "rounded-full";
       }
       return `rounded${getRadius(radius.all)}`;
@@ -1713,7 +1713,6 @@
   var tailwindMain = (sceneNode, settings) => {
     localTailwindSettings = settings;
     previousExecutionCache = [];
-    console.log("---", sceneNode);
     let result = tailwindWidgetGenerator(sceneNode, localTailwindSettings.jsx);
     if (result.length > 0 && result.startsWith("\n")) {
       result = result.slice(1, result.length);
@@ -1723,8 +1722,6 @@
   var tailwindWidgetGenerator = (sceneNode, isJsx) => {
     let comp = "";
     sceneNode.forEach((e) => {
-      if (e.name == "Frame 682") {
-      }
       switch (e.type) {
         case "PACVUE":
           comp += pacvueContainer(e);
@@ -2011,12 +2008,11 @@
     var ary = node.name.split("-");
     var comp = "";
     const width = node.width ? ` width="${node.width}px"` : "";
-    const classHtml = node.style.length > 0 ? ` class="${node.style.join(" ")}"` : "";
     switch (ary[0]) {
       case "PacvueSelect":
         const labelInner = ary[1] ? ` :labelInner="'${ary[1]}'"` : "";
         comp = `
-<${ary[0]}${width}${classHtml} ${labelInner} />`;
+<${ary[0]}${width} ${labelInner} />`;
         break;
       case "PacvueInput":
         let endTag = " />";
@@ -2030,6 +2026,17 @@
     <el-icon><PacvueIconSearch /></el-icon>
   </template>
 </${ary[0]}>`;
+          } else if (ary[1] == "Selection") {
+            let slot = "";
+            if (ary[2]) {
+              const slotType = ary[2] == "%" ? "suffix" : "prefix";
+              slot = `
+  <template #${slotType}>
+    <span>${ary[2]}</span>
+  </template>
+`;
+            }
+            endTag = ` :inputWithSelection="true" :removeDuplication="true">${slot}</${ary[0]}>`;
           } else if (ary[1] == "%") {
             endTag = ` >
   <template #suffix>
@@ -2045,12 +2052,11 @@
           }
         }
         comp = `
-<${ary[0]}${width}${classHtml}${endTag}`;
+<${ary[0]}${width}${endTag}`;
         break;
       case "PacvueDatePicker":
-        const datePickerWidth = node.width ? ` style="width: ${node.width} !important"` : "";
         comp = `
-<${ary[0]}${datePickerWidth} type="${ary[1]}" />`;
+<${ary[0]} type="${ary[1]}" />`;
         break;
       case "PacvueCheckbox":
       case "PacvueRadio":
@@ -2069,7 +2075,7 @@
       case "PacvueButton":
         let type = "";
         let icon = "";
-        let size = "";
+        let size = node.height == 32 ? ' size="small"' : "";
         if (ary[1]) {
           if (ary[1].includes("primary")) {
             type = ` type="primary"`;
@@ -2080,9 +2086,6 @@
         }
         if (ary[2]) {
           icon = `<el-icon :size="20"><${ary[2]}></${ary[2]}></el-icon>`;
-        }
-        if (node.height == 32) {
-          size = ' size="small"';
         }
         comp = `
 <${ary[0]}${type}${size}>${icon}${node.html}</${ary[0]}>`;
@@ -2363,6 +2366,7 @@
           height = e.height;
         }
       });
+      const arrowNum = searchByName(visibleChildNode, 0, "top bar-arrow-down");
       ParentObj.height = height;
       if (childrenList.some((e) => ["\u591A\u9009\u6846", "Checkbox"].includes(e.name))) {
         ParentObj.type = "PACVUE";
@@ -2378,7 +2382,6 @@
       } else if (node.height < 40 && node.height > 30 && (styleClass.includes("rounded-md") || styleClass.includes("rounded")) && styleClass.includes("border") && styleClass.includes("border-[var(--icon-disabled--)]")) {
         if (node.height != node.width) {
           const newClass = styleClass.filter((e) => e != "rounded-md" && e != "rounded" && e != "border" && e != "border-[var(--icon-disabled--)]" && e != "h-9" && e != "h-8" && !e.includes("px") && !e.includes("py"));
-          const arrowNum = searchByName(visibleChildNode, 0, "top bar-arrow-down");
           const dateNum = searchByName(visibleChildNode, 0, "Rectangle 1138");
           var textLength = searchByType(visibleChildNode, 0, "TEXT");
           var textArr = [];
@@ -2422,10 +2425,24 @@
           }
           ParentObj.name = `PacvueButton-${icon}`;
         }
+      } else if (childrenList.length == 2 && childrenList[0].style.includes("rounded-tl rounded-bl") && childrenList[1].style.includes("rounded-tr rounded-br") && arrowNum == 1) {
+        ParentObj.type = "PACVUE";
+        var textLength = searchByType(visibleChildNode, 0, "TEXT");
+        var textArr = [];
+        if (textLength > 0) {
+          textArr = getChildrenAllText(visibleChildNode, textArr);
+        }
+        let name = "PacvueInput-Selection";
+        textArr.forEach((e) => {
+          if (e.length == 1) {
+            name += "-" + e;
+          }
+        });
+        ParentObj.name = name;
       } else if (node.height == node.width && node.height == 18 || node.name == "\u591A\u9009\u6846") {
         ParentObj.type = "PACVUE";
         ParentObj.name = "Checkbox";
-      } else if (node.height == node.width && node.height == 20 && styleClass.includes("border") || node.name == "\u5355\u9009\u6846") {
+      } else if (node.height == node.width && node.height == 20 && styleClass.includes("rounded-full") || node.name == "\u5355\u9009\u6846") {
         ParentObj.type = "PACVUE";
         ParentObj.name = "Radio";
       } else if (childrenList.some((e) => ["top bar-arrow-down", "PacvueIcon-PacvueIconTopBarArrowDown"].includes(e.name))) {
@@ -2511,7 +2528,7 @@
         ParentObj.name = `PacvueIcon-${icon}`;
       }
       const pacvueChildren = childrenList.filter((e) => e.type == "PACVUE");
-      if (childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some((e) => {
+      if (ParentObj.type != "PACVUE" && childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some((e) => {
         return e.includes("bg-") || e.includes("border-") || e.includes("grow");
       }))) {
         return childrenList[0];

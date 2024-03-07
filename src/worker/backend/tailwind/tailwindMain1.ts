@@ -55,16 +55,15 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
         height = e.height
       }
     })
+    const arrowNum = searchByName(visibleChildNode, 0, 'top bar-arrow-down')
     ParentObj.height = height
-
     if (childrenList.some(e=> ['多选框', 'Checkbox'].includes(e.name))){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueCheckbox';
     } else if (childrenList.some(e=> ['单选框', 'Radio'].includes(e.name))){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueRadio';
-    } 
-
+    }
     if(childrenList.length > 1 && childrenList.filter(e=>e.name == 'PacvueRadio').length == childrenList.length){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'PacvueRadioGroup';
@@ -73,7 +72,6 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
       /* 通过样式判断是否是选框 */
       if(node.height != node.width){
         const newClass = styleClass.filter(e=>e != 'rounded-md' && e != 'rounded' && e != 'border' && e != 'border-[var(--icon-disabled--)]' && e != 'h-9' && e != 'h-8' && !e.includes('px') && !e.includes('py'))
-        const arrowNum = searchByName(visibleChildNode, 0, 'top bar-arrow-down')
         const dateNum = searchByName(visibleChildNode, 0, 'Rectangle 1138')
         var textLength = searchByType(visibleChildNode, 0, 'TEXT')
         var textArr: string[] = []
@@ -117,11 +115,24 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
         }
         ParentObj.name = `PacvueButton-${icon}`;
       }
+    } else if (childrenList.length == 2 && childrenList[0].style.includes('rounded-tl rounded-bl') && childrenList[1].style.includes('rounded-tr rounded-br') && arrowNum == 1){
+      ParentObj.type = 'PACVUE';
+      var textLength = searchByType(visibleChildNode, 0, 'TEXT')
+      var textArr: string[] = []
+      if(textLength > 0){
+        textArr = getChildrenAllText(visibleChildNode, textArr)
+      }
+			let name = 'PacvueInput-Selection';
+				textArr.forEach((e) => {
+				if (e.length == 1) {
+					name += '-' + e;
+				}
+			});
+      ParentObj.name = name;
     } else if ((node.height == node.width && node.height == 18) || node.name == '多选框'){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'Checkbox';
-
-    } else if ((node.height == node.width && node.height == 20 && styleClass.includes("border")) || node.name == '单选框'){
+    } else if ((node.height == node.width && node.height == 20 && styleClass.includes("rounded-full")) || node.name == '单选框'){
       ParentObj.type = 'PACVUE';
       ParentObj.name = 'Radio';
     } else if (childrenList.some(e=>['top bar-arrow-down','PacvueIcon-PacvueIconTopBarArrowDown'].includes(e.name))){
@@ -206,7 +217,7 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
     }
 
     const pacvueChildren = childrenList.filter(e=>e.type == 'PACVUE')
-    if(childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some(e=>{ return e.includes('bg-') || e.includes('border-') || e.includes('grow') }))){
+    if(ParentObj.type != 'PACVUE' && childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some(e=>{ return e.includes('bg-') || e.includes('border-') || e.includes('grow') }))){
       return childrenList[0]
     }else{
       ParentObj.children = childrenList

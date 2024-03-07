@@ -20,7 +20,6 @@ export const tailwindMain = (
   localTailwindSettings = settings;
   previousExecutionCache = [];
   // 生成 Tailwind 控件
-    console.log('---', sceneNode)
   let result = tailwindWidgetGenerator(sceneNode, localTailwindSettings.jsx);
 
   // 移除容器中生成的初始换行符
@@ -34,19 +33,6 @@ const tailwindWidgetGenerator = (sceneNode: any[], isJsx: boolean): string => {
   // 过滤非可见图层
 	sceneNode.forEach((e) => {
     /* 判断当前图层是否与子图层一致 */
-    // if(e.children.length == 1){
-    //   let nodeStr = JSON.stringify(e.node)
-    //   let nodeArr = nodeStr.split(e.node.name)
-    //   let childNodeStr = JSON.stringify(e.children[0].node)
-    //   let childNodeArr = childNodeStr.split(e.children[0].node.name)
-    //   /* 如果一致 则跳过当前图层 */ /* 如果当前图层只有一个子级 并且子级是输入框 跳过当前图层 */
-    //   if(nodeArr[1] == childNodeArr[1] || e.children[0].name.includes('特殊输入框')){
-    //     comp += tailwindWidgetGenerator(e.children, isJsx)
-    //     return
-    //   }
-    // }
-  if(e.name == 'Frame 682'){
-  }
     switch (e.type) {
 			case "PACVUE":
 				comp += pacvueContainer(e)
@@ -347,11 +333,10 @@ const pacvueContainer = (node:any): string=>{
 	var ary = node.name.split('-')
 	var comp = ''
 	const width = node.width ? ` width="${node.width}px"` : ''
-	const classHtml = node.style.length > 0 ?  ` class="${node.style.join(" ")}"` : ""
 	switch (ary[0]){
 		case 'PacvueSelect':
 			const labelInner = ary[1] ? ` :labelInner="'${ary[1]}'"` : ''
-			comp = `\n<${ary[0]}${width}${classHtml} ${labelInner} />`
+			comp = `\n<${ary[0]}${width} ${labelInner} />`
 			break
 		case 'PacvueInput':
 			let endTag = ' />'
@@ -361,17 +346,23 @@ const pacvueContainer = (node:any): string=>{
 					endTag = ' type="textarea"' + rows + '/>'
 				}else if(ary[1] == 'Search') {
 					endTag = ` >\n  <template #${ary[2]}>\n    <el-icon><PacvueIconSearch /></el-icon>\n  </template>\n</${ary[0]}>`
+				}else if(ary[1] == 'Selection') {
+					let slot =''
+					if(ary[2]){
+						const slotType = ary[2] == '%' ? 'suffix' : 'prefix'
+						slot = `\n  <template #${slotType}>\n    <span>${ary[2]}</span>\n  </template>\n`
+					}
+					endTag = ` :inputWithSelection="true" :removeDuplication="true">${slot}</${ary[0]}>`
 				}else if(ary[1] == '%') {
 					endTag = ` >\n  <template #suffix>\n    <span>${ary[1]}</span>\n  </template>\n</${ary[0]}>`
 				}else{
 					endTag = ` >\n  <template #prefix>\n    <span>${ary[1]}</span>\n  </template>\n</${ary[0]}>`
 				}
 			}
-			comp = `\n<${ary[0]}${width}${classHtml}${endTag}`;
+			comp = `\n<${ary[0]}${width}${endTag}`;
 		break
 		case 'PacvueDatePicker':
-      const datePickerWidth = node.width ? ` style="width: ${node.width} !important"` : ''
-			comp = `\n<${ary[0]}${datePickerWidth} type="${ary[1]}" />`
+			comp = `\n<${ary[0]} type="${ary[1]}" />`
 			break
 		case 'PacvueCheckbox':
 		case 'PacvueRadio':
@@ -387,7 +378,7 @@ const pacvueContainer = (node:any): string=>{
 		case 'PacvueButton':
       let type = ""
       let icon = ""
-      let size = ""
+      let size = node.height == 32 ? ' size="small"' : ""
       if(ary[1]){
         if(ary[1].includes('primary')){
           type = ` type="primary"`
@@ -398,9 +389,6 @@ const pacvueContainer = (node:any): string=>{
       }
       if(ary[2]){
         icon = `<el-icon :size="20"><${ary[2]}></${ary[2]}></el-icon>`
-      }
-      if(node.height == 32){
-        size = ' size="small"'
       }
 			comp = `\n<${ary[0]}${type}${size}>${icon}${node.html}</${ary[0]}>`
 			break

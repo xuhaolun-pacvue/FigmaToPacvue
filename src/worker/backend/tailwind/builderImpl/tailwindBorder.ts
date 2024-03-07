@@ -76,10 +76,9 @@ export const tailwindBorderRadius = (node: SceneNode): string => {
   if ("all" in radius) {
     if (radius.all === 0) {
       return "";
-    } else if (radius.all > 999 && node.width < 1000 && node.height < 1000) {
+    } else if (radius.all >= 999 && node.width < 1000 && node.height < 1000) {
       return "rounded-full";
     }
-
     return `rounded${getRadius(radius.all)}`;
   }
 
