@@ -1139,36 +1139,6 @@
     };
   };
 
-  // src/worker/backend/common/commonPosition.ts
-  var getCommonPositionValue = (node) => {
-    if (node.parent && node.parent.type === "GROUP") {
-      return {
-        x: node.x - node.parent.x,
-        y: node.y - node.parent.y
-      };
-    }
-    return {
-      x: node.x,
-      y: node.y
-    };
-  };
-  var commonIsAbsolutePosition = (node, optimizeLayout) => {
-    if (optimizeLayout && node.parent && "layoutMode" in node.parent && node.parent.inferredAutoLayout !== null) {
-      return false;
-    }
-    if ("layoutAlign" in node) {
-      if (!node.parent || node.parent === void 0) {
-        return false;
-      }
-      const parentLayoutIsNone = "layoutMode" in node.parent && node.parent.layoutMode === "NONE";
-      const hasNoLayoutMode = !("layoutMode" in node.parent);
-      if (node.layoutPositioning === "ABSOLUTE" || parentLayoutIsNone || hasNoLayoutMode) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   // src/worker/backend/common/parseJSX.ts
   var formatWithJSX = (property, isJsx, value) => {
     const jsx_property = property.split("-").map((d, i) => i > 0 ? d.charAt(0).toUpperCase() + d.slice(1) : d).join("");
@@ -1203,9 +1173,7 @@
     }
     let h = "";
     if (typeof size.height === "number") {
-      if (commonIsAbsolutePosition(node, optimizeLayout)) {
-        h = `h-${pxToLayoutSize(size.height)}`;
-      }
+      h = `h-${pxToLayoutSize(size.height)}`;
     } else if (size.height === "fill") {
       if (size.height === "fill" && nodeParent && "layoutMode" in nodeParent && nodeParent.layoutMode === "VERTICAL") {
         h = `grow shrink basis-0`;
@@ -1281,6 +1249,36 @@
       );
     }
     return comp;
+  };
+
+  // src/worker/backend/common/commonPosition.ts
+  var getCommonPositionValue = (node) => {
+    if (node.parent && node.parent.type === "GROUP") {
+      return {
+        x: node.x - node.parent.x,
+        y: node.y - node.parent.y
+      };
+    }
+    return {
+      x: node.x,
+      y: node.y
+    };
+  };
+  var commonIsAbsolutePosition = (node, optimizeLayout) => {
+    if (optimizeLayout && node.parent && "layoutMode" in node.parent && node.parent.inferredAutoLayout !== null) {
+      return false;
+    }
+    if ("layoutAlign" in node) {
+      if (!node.parent || node.parent === void 0) {
+        return false;
+      }
+      const parentLayoutIsNone = "layoutMode" in node.parent && node.parent.layoutMode === "NONE";
+      const hasNoLayoutMode = !("layoutMode" in node.parent);
+      if (node.layoutPositioning === "ABSOLUTE" || parentLayoutIsNone || hasNoLayoutMode) {
+        return true;
+      }
+    }
+    return false;
   };
 
   // src/worker/backend/tailwind/tailwindDefaultBuilder.ts
@@ -2354,140 +2352,68 @@
       children: []
     };
     const n = node;
+    let visibleChildNode = [];
     if (n.children) {
-      const visibleChildNode = n.children.filter((d) => d.visible);
-      var childrenList = [];
-      visibleChildNode.forEach((e) => {
-        childrenList.push(tailwindContainer2(e));
-      });
-      let height = node.height;
-      childrenList.forEach((e) => {
-        if (e.height > height) {
-          height = e.height;
-        }
-      });
-      const arrowNum = searchByName(visibleChildNode, 0, "top bar-arrow-down");
-      ParentObj.height = height;
-      if (childrenList.some((e) => ["\u591A\u9009\u6846", "Checkbox"].includes(e.name))) {
-        ParentObj.type = "PACVUE";
-        ParentObj.name = "PacvueCheckbox";
-      } else if (childrenList.some((e) => ["\u5355\u9009\u6846", "Radio"].includes(e.name))) {
-        ParentObj.type = "PACVUE";
-        ParentObj.name = "PacvueRadio";
+      visibleChildNode = n.children.filter((d) => d.visible);
+    }
+    var childrenList = [];
+    visibleChildNode.forEach((e) => {
+      childrenList.push(tailwindContainer2(e));
+    });
+    let height = node.height;
+    childrenList.forEach((e) => {
+      if (e.height > height) {
+        height = e.height;
       }
-      if (childrenList.length > 1 && childrenList.filter((e) => e.name == "PacvueRadio").length == childrenList.length) {
-        ParentObj.type = "PACVUE";
-        ParentObj.name = "PacvueRadioGroup";
-        ParentObj.children = childrenList;
-      } else if (node.height < 40 && node.height > 30 && (styleClass.includes("rounded-md") || styleClass.includes("rounded")) && styleClass.includes("border") && styleClass.includes("border-[var(--icon-disabled--)]")) {
-        if (node.height != node.width) {
-          const newClass = styleClass.filter((e) => e != "rounded-md" && e != "rounded" && e != "border" && e != "border-[var(--icon-disabled--)]" && e != "h-9" && e != "h-8" && !e.includes("px") && !e.includes("py"));
-          const dateNum = searchByName(visibleChildNode, 0, "Rectangle 1138");
-          var textLength = searchByType(visibleChildNode, 0, "TEXT");
-          var textArr = [];
-          if (textLength > 0) {
-            textArr = getChildrenAllText(visibleChildNode, textArr);
-          }
-          let name;
-          if (dateNum > 0) {
-            name = "PacvueDatePicker";
-            textArr.forEach((e) => {
-              if (e == "~" || e.includes("~")) {
-                name += "-daterange";
-              }
-            });
-          } else if (arrowNum == 0) {
-            name = "PacvueInput";
-            textArr.forEach((e) => {
-              if (e.length == 1) {
-                name += "-" + e;
-              }
-            });
-          } else {
-            name = "PacvueSelect";
-            const num = searchByName(visibleChildNode, 0, "Rectangle 539");
-            if (num == 1) {
-              name += "-" + textArr[0];
-            }
-          }
-          ParentObj.type = "PACVUE";
-          ParentObj.name = name;
-          ParentObj.style = newClass;
-        } else {
-          ParentObj.type = "PACVUE";
-          let icon = "-";
-          const iconList = visibleChildNode.filter((e) => {
-            return e.width == e.height && e.type != "TEXT";
-          });
-          if (iconList.length == 1) {
-            const a = iconList[0].name;
-            icon += svgIcon[a.trim()];
-          }
-          ParentObj.name = `PacvueButton-${icon}`;
-        }
-      } else if (childrenList.length == 2 && childrenList[0].style.includes("rounded-tl rounded-bl") && childrenList[1].style.includes("rounded-tr rounded-br") && arrowNum == 1) {
-        ParentObj.type = "PACVUE";
+    });
+    const arrowNum = searchByName(visibleChildNode, 0, "top bar-arrow-down");
+    ParentObj.height = height;
+    if (childrenList.some((e) => ["\u591A\u9009\u6846", "Checkbox"].includes(e.name))) {
+      ParentObj.type = "PACVUE";
+      ParentObj.name = "PacvueCheckbox";
+    } else if (childrenList.some((e) => ["\u5355\u9009\u6846", "Radio"].includes(e.name))) {
+      ParentObj.type = "PACVUE";
+      ParentObj.name = "PacvueRadio";
+    }
+    if (childrenList.length > 1 && childrenList.filter((e) => e.name == "PacvueRadio").length == childrenList.length) {
+      ParentObj.type = "PACVUE";
+      ParentObj.name = "PacvueRadioGroup";
+      ParentObj.children = childrenList;
+    } else if (node.height < 40 && node.height > 30 && (styleClass.includes("rounded-md") || styleClass.includes("rounded")) && styleClass.includes("border") && styleClass.includes("border-[var(--icon-disabled--)]")) {
+      if (node.height != node.width) {
+        const newClass = styleClass.filter((e) => e != "rounded-md" && e != "rounded" && e != "border" && e != "border-[var(--icon-disabled--)]" && e != "h-9" && e != "h-8" && !e.includes("px") && !e.includes("py"));
+        const dateNum = searchByName(visibleChildNode, 0, "Rectangle 1138");
         var textLength = searchByType(visibleChildNode, 0, "TEXT");
         var textArr = [];
         if (textLength > 0) {
           textArr = getChildrenAllText(visibleChildNode, textArr);
         }
-        let name = "PacvueInput-Selection";
-        textArr.forEach((e) => {
-          if (e.length == 1) {
-            name += "-" + e;
-          }
-        });
-        ParentObj.name = name;
-      } else if (node.height == node.width && node.height == 18 || node.name == "\u591A\u9009\u6846") {
-        ParentObj.type = "PACVUE";
-        ParentObj.name = "Checkbox";
-      } else if (node.height == node.width && node.height == 20 && styleClass.includes("rounded-full") || node.name == "\u5355\u9009\u6846") {
-        ParentObj.type = "PACVUE";
-        ParentObj.name = "Radio";
-      } else if (childrenList.some((e) => ["top bar-arrow-down", "PacvueIcon-PacvueIconTopBarArrowDown"].includes(e.name))) {
-        ParentObj.type = "PACVUE";
-        ParentObj.name = "PacvueDropdown";
-        ParentObj.children = childrenList;
-      } else if (node.name == "\u5F00\u5173") {
-        ParentObj.type = "PACVUE";
-        ParentObj.name = "PacvueSwitch";
-      } else if (node.name == "\u6587\u672C\u57DF") {
-        if (childrenList.some((e) => ["\u6587\u672C\u57DF", "PacvueInput-Textarea"].includes(e.name))) {
-          ParentObj.type = "PACVUE";
-          ParentObj.name = "PacvueInput-Textarea";
+        let name;
+        if (dateNum > 0) {
+          name = "PacvueDatePicker";
+          textArr.forEach((e) => {
+            if (e == "~" || e.includes("~")) {
+              name += "-daterange";
+            }
+          });
+        } else if (arrowNum == 0) {
+          name = "PacvueInput";
+          textArr.forEach((e) => {
+            if (e.length == 1) {
+              name += "-" + e;
+            }
+          });
         } else {
-          ParentObj.children = childrenList;
-        }
-      } else if (node.name == "\u641C\u7D22\u6846") {
-        let slot = "-prefix";
-        if (childrenList.length == 1 && childrenList[0].name == "Search\u5728\u540E") {
-          slot = "-append";
-        }
-        ParentObj.type = "PACVUE";
-        ParentObj.name = "PacvueInput-Search" + slot;
-      } else if (childrenList.length == 1 && childrenList[0].name == "Input" && node.height >= 40) {
-        ParentObj.type = "PACVUE";
-        ParentObj.name = "PacvueInput-Textarea";
-      } else if (node.name.includes("tab")) {
-        ParentObj.type = "PACVUE";
-        let html = "";
-        childrenList.forEach((e) => {
-          const text = getChildrenAllText([e.node], []).join(" ");
-          if (childrenList.some((e2) => {
-            return e2.style.includes("border");
-          })) {
-            ParentObj.name = `PacvueButtonTab`;
-            html += `
-<pacvue-radio-button >${text}</pacvue-radio-button>`;
-          } else {
-            ParentObj.name = `PacvueTab`;
-            html += `
-<el-tab-pane label="${text}"></el-tab-pane>`;
+          name = "PacvueSelect";
+          const num = searchByName(visibleChildNode, 0, "Rectangle 539");
+          if (num == 1) {
+            name += "-" + textArr[0];
           }
-        });
-        ParentObj.html = html;
-      } else if (node.name.includes("\u4E3B\u8981\u6309\u94AE") || node.name.includes("\u6B21\u7EA7\u6309\u94AE") || (node.height == 36 || node.height == 32) && styleClass.includes("border") && styleClass.includes("border-[var(--el-color-primary)]")) {
+        }
+        ParentObj.type = "PACVUE";
+        ParentObj.name = name;
+        ParentObj.style = newClass;
+      } else {
         ParentObj.type = "PACVUE";
         let icon = "-";
         const iconList = visibleChildNode.filter((e) => {
@@ -2497,44 +2423,117 @@
           const a = iconList[0].name;
           icon += svgIcon[a.trim()];
         }
-        var textLength = searchByType(visibleChildNode, 0, "TEXT");
-        var textArr = [];
-        if (textLength > 0) {
-          textArr = getChildrenAllText(visibleChildNode, textArr);
-        }
-        if (textArr.length > 0) {
-          ParentObj.html = textArr.join(" ");
-        }
-        var type = "primaryplain";
-        if (styleClass.includes("bg-[var(--el-color-primary)]") || node.name.includes("\u4E3B\u8981\u6309\u94AE")) {
-          type = "primary";
-        }
-        ParentObj.name = `PacvueButton-${type}${icon}`;
-      } else if (node.name.includes("\u7070\u8272\u6309\u94AE") || node.name.toLocaleLowerCase().includes("button")) {
-        ParentObj.type = "PACVUE";
-        let name = "PacvueButton";
-        let type2 = "primary";
-        if (node.name.includes("\u7070\u8272\u6309\u94AE")) {
-          type2 = "";
-        }
-        if (node.name.includes("\u6B21\u7EA7\u6309\u94AE")) {
-          type2 = "plain";
-        }
-        ParentObj.name = `${name}-${type2}`;
-      } else if (node.width == node.height && node.width < 26 && (node.type == "INSTANCE" || childrenList.some((e) => e.name == "Union"))) {
-        ParentObj.type = "PACVUE";
-        const a = node.name;
-        let icon = svgIcon[a.trim()];
-        ParentObj.name = `PacvueIcon-${icon}`;
+        ParentObj.name = `PacvueButton-${icon}`;
       }
-      const pacvueChildren = childrenList.filter((e) => e.type == "PACVUE");
-      if (ParentObj.type != "PACVUE" && childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some((e) => {
-        return e.includes("bg-") || e.includes("border-") || e.includes("grow");
-      }))) {
-        return childrenList[0];
+    } else if (childrenList.length == 2 && childrenList[0].style.includes("rounded-tl rounded-bl") && childrenList[1].style.includes("rounded-tr rounded-br") && arrowNum == 1) {
+      ParentObj.type = "PACVUE";
+      var textLength = searchByType(visibleChildNode, 0, "TEXT");
+      var textArr = [];
+      if (textLength > 0) {
+        textArr = getChildrenAllText(visibleChildNode, textArr);
+      }
+      let name = "PacvueInput-Selection";
+      textArr.forEach((e) => {
+        if (e.length == 1) {
+          name += "-" + e;
+        }
+      });
+      ParentObj.name = name;
+    } else if (node.height == node.width && node.height == 18 || node.name == "\u591A\u9009\u6846") {
+      ParentObj.type = "PACVUE";
+      ParentObj.name = "Checkbox";
+    } else if (node.height == node.width && node.height == 20 && styleClass.includes("rounded-full") || node.name == "\u5355\u9009\u6846") {
+      ParentObj.type = "PACVUE";
+      ParentObj.name = "Radio";
+    } else if (childrenList.some((e) => ["top bar-arrow-down", "PacvueIcon-PacvueIconTopBarArrowDown"].includes(e.name))) {
+      ParentObj.type = "PACVUE";
+      ParentObj.name = "PacvueDropdown";
+      ParentObj.children = childrenList;
+    } else if (node.name == "\u5F00\u5173") {
+      ParentObj.type = "PACVUE";
+      ParentObj.name = "PacvueSwitch";
+    } else if (node.name == "\u6587\u672C\u57DF") {
+      if (childrenList.some((e) => ["\u6587\u672C\u57DF", "PacvueInput-Textarea"].includes(e.name))) {
+        ParentObj.type = "PACVUE";
+        ParentObj.name = "PacvueInput-Textarea";
       } else {
         ParentObj.children = childrenList;
       }
+    } else if (node.name == "\u641C\u7D22\u6846") {
+      let slot = "-prefix";
+      if (childrenList.length == 1 && childrenList[0].name == "Search\u5728\u540E") {
+        slot = "-append";
+      }
+      ParentObj.type = "PACVUE";
+      ParentObj.name = "PacvueInput-Search" + slot;
+    } else if (childrenList.length == 1 && childrenList[0].name == "Input" && node.height >= 40) {
+      ParentObj.type = "PACVUE";
+      ParentObj.name = "PacvueInput-Textarea";
+    } else if (node.name.includes("tab")) {
+      ParentObj.type = "PACVUE";
+      let html = "";
+      childrenList.forEach((e) => {
+        const text = getChildrenAllText([e.node], []).join(" ");
+        if (childrenList.some((e2) => {
+          return e2.style.includes("border");
+        })) {
+          ParentObj.name = `PacvueButtonTab`;
+          html += `
+<pacvue-radio-button >${text}</pacvue-radio-button>`;
+        } else {
+          ParentObj.name = `PacvueTab`;
+          html += `
+<el-tab-pane label="${text}"></el-tab-pane>`;
+        }
+      });
+      ParentObj.html = html;
+    } else if (node.name.includes("\u4E3B\u8981\u6309\u94AE") || node.name.includes("\u6B21\u7EA7\u6309\u94AE") || (node.height == 36 || node.height == 32) && styleClass.includes("border") && styleClass.includes("border-[var(--el-color-primary)]")) {
+      ParentObj.type = "PACVUE";
+      let icon = "-";
+      const iconList = visibleChildNode.filter((e) => {
+        return e.width == e.height && e.type != "TEXT";
+      });
+      if (iconList.length == 1) {
+        const a = iconList[0].name;
+        icon += svgIcon[a.trim()];
+      }
+      var textLength = searchByType(visibleChildNode, 0, "TEXT");
+      var textArr = [];
+      if (textLength > 0) {
+        textArr = getChildrenAllText(visibleChildNode, textArr);
+      }
+      if (textArr.length > 0) {
+        ParentObj.html = textArr.join(" ");
+      }
+      var type = "primaryplain";
+      if (styleClass.includes("bg-[var(--el-color-primary)]") || node.name.includes("\u4E3B\u8981\u6309\u94AE")) {
+        type = "primary";
+      }
+      ParentObj.name = `PacvueButton-${type}${icon}`;
+    } else if (node.name.includes("\u7070\u8272\u6309\u94AE") || node.name.toLocaleLowerCase().includes("button")) {
+      ParentObj.type = "PACVUE";
+      let name = "PacvueButton";
+      let type2 = "primary";
+      if (node.name.includes("\u7070\u8272\u6309\u94AE")) {
+        type2 = "";
+      }
+      if (node.name.includes("\u6B21\u7EA7\u6309\u94AE")) {
+        type2 = "plain";
+      }
+      ParentObj.name = `${name}-${type2}`;
+    } else if (node.width == node.height && node.width < 26 && (node.type == "INSTANCE" || childrenList.some((e) => e.name == "Union"))) {
+      ParentObj.type = "PACVUE";
+      const a = node.name;
+      let icon = svgIcon[a.trim()];
+      ParentObj.name = `PacvueIcon-${icon}`;
+    }
+    const pacvueChildren = childrenList.filter((e) => e.type == "PACVUE");
+    if (ParentObj.type != "PACVUE" && childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some((e) => {
+      return e.includes("bg-") || e.includes("border-") || e.includes("grow");
+    }))) {
+      return childrenList[0];
+    } else {
+      ParentObj.children = childrenList;
     }
     return ParentObj;
   };
