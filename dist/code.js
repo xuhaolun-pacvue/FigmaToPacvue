@@ -1704,444 +1704,6 @@
     }
   };
 
-  // src/worker/backend/tailwind/tailwindMain.ts
-  var localTailwindSettings;
-  var previousExecutionCache;
-  var selfClosingTags = ["img"];
-  var tailwindMain = (sceneNode, settings) => {
-    localTailwindSettings = settings;
-    previousExecutionCache = [];
-    let result = tailwindWidgetGenerator(sceneNode, localTailwindSettings.jsx);
-    if (result.length > 0 && result.startsWith("\n")) {
-      result = result.slice(1, result.length);
-    }
-    return result;
-  };
-  var tailwindWidgetGenerator = (sceneNode, isJsx) => {
-    let comp = "";
-    sceneNode.forEach((e) => {
-      switch (e.type) {
-        case "PACVUE":
-          comp += pacvueContainer(e);
-          break;
-        case "RECTANGLE":
-        case "ELLIPSE":
-          comp += tailwindContainer(e.node, "", "", isJsx);
-          break;
-        case "GROUP":
-          comp += tailwindGroup(e, isJsx);
-          break;
-        case "INSTANCE":
-        case "FRAME":
-        case "COMPONENT":
-        case "COMPONENT_SET":
-          comp += tailwindFrame(e.node, e, isJsx);
-          break;
-        case "TEXT":
-          comp += tailwindText(e.node, isJsx);
-          break;
-        case "LINE":
-          comp += tailwindLine(e.node, isJsx);
-          break;
-        case "SECTION":
-          comp += tailwindSection(e.node, isJsx);
-          break;
-        case "VECTOR":
-          break;
-      }
-    });
-    return comp;
-  };
-  var tailwindFrame = (node, obj, isJsx) => {
-    const width = node.width ? `width='${node.width}px'` : "";
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout);
-    if (node.name == "\u5355\u9009\u6846+\u6587\u5B57") {
-      return tailwindWidgetGenerator(obj.children, isJsx);
-    }
-    const visibleChildNode = childrNode.filter((e) => e.visible);
-    const visibleChildNode0 = visibleChildNode[0];
-    if (visibleChildNode.length == 1 && visibleChildNode[0].name == "Input") {
-      return pacvueInput(visibleChildNode0);
-    }
-    if (visibleChildNode.length == 2) {
-      if (visibleChildNode[1].name == "top bar-arrow-down") {
-        const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode0, localTailwindSettings.optimizeLayout);
-        const visibleGrandChildNode = grandChildrNode.filter((e) => e.visible);
-        if (visibleGrandChildNode.length > 1 && visibleGrandChildNode[0].name == "Vendor" && visibleGrandChildNode[1].name == "Rectangle 539") {
-          const grandChildrNodeText = grandChildrNode[0];
-          let text = grandChildrNodeText.characters;
-          return `
-<pacvue-select ${width} :labelInner="'${text}'" />`;
-        }
-      }
-    }
-    if (visibleChildNode.length >= 2) {
-      const visibleChildNodelast = visibleChildNode[visibleChildNode.length - 1];
-      if (isIcon(visibleChildNodelast)) {
-        if (getIconName(visibleChildNodelast) == "Rectangle 1138") {
-          return '\n<PacvueDatePicker type="daterange" />';
-        }
-      }
-    }
-    if (isIcon(node)) {
-      return pacvueIcon(node);
-    }
-    const childrenStr = tailwindWidgetGenerator(obj.children, isJsx);
-    var rowColumn = "";
-    if (obj.children.length > 1) {
-      if (node.layoutMode !== "NONE") {
-        rowColumn = tailwindAutoLayoutProps(node, node);
-      } else if (localTailwindSettings.optimizeLayout && node.inferredAutoLayout !== null) {
-        rowColumn = tailwindAutoLayoutProps(node, node.inferredAutoLayout);
-      }
-    }
-    return tailwindContainer(node, childrenStr, rowColumn, isJsx);
-  };
-  var tailwindGroup = (obj, isJsx = false) => {
-    const node = obj.node;
-    if (obj.width < 0 || node.height <= 0 || node.children.length === 0) {
-      return "";
-    }
-    const builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).blend(node);
-    builder.size1(obj);
-    builder.position(node, localTailwindSettings.optimizeLayout);
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible && ["RECTANGLE", "VECTOR"].includes(e.type) || e.name.includes("\u77E9\u5F62"));
-    if (visibleChildNode.length > 1) {
-      visibleChildNode.forEach((e) => {
-        var _a;
-        const cnode = node;
-        if (((_a = retrieveTopFill(cnode.fills)) == null ? void 0 : _a.type) !== "IMAGE") {
-          builder.border(e);
-        }
-      });
-    }
-    if (builder.attributes || builder.style) {
-      const attr = builder.build("");
-      const generator = tailwindWidgetGenerator(obj.children, isJsx);
-      return `
-<div${attr}>${indentString(generator)}
-</div>`;
-    }
-    return tailwindWidgetGenerator(obj.children, isJsx);
-  };
-  var tailwindText = (node, isJsx) => {
-    let layoutBuilder = new TailwindTextBuilder(node, localTailwindSettings.layerName, isJsx).commonPositionStyles(node, localTailwindSettings.optimizeLayout).textAlign(node);
-    const styledHtml = layoutBuilder.getTextSegments(node.id);
-    previousExecutionCache.push(...styledHtml);
-    let content = "";
-    if (styledHtml.length === 1) {
-      layoutBuilder.addAttributes(styledHtml[0].style);
-      content = styledHtml[0].text;
-    } else {
-      content = styledHtml.map((style) => `<span class="${style.style}">${style.text}</span>`).join("");
-    }
-    return `
-<div${layoutBuilder.build()}>${content}</div>`;
-  };
-  var tailwindContainer = (node, children, additionalAttr, isJsx) => {
-    var _a;
-    if (node.width < 0 || node.height < 0) {
-      return children;
-    }
-    let builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).commonPositionStyles(node, localTailwindSettings.optimizeLayout).commonShapeStyles(node);
-    let builder2 = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).commonShapeStyles(node);
-    const asnode = node;
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(asnode, localTailwindSettings.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible && ["RECTANGLE", "VECTOR"].includes(e.type) && e.name.includes("\u77E9\u5F62"));
-    if (visibleChildNode.length > 1) {
-      visibleChildNode.forEach((e) => {
-        var _a2;
-        const cnode = node;
-        if (((_a2 = retrieveTopFill(cnode.fills)) == null ? void 0 : _a2.type) !== "IMAGE") {
-          builder.border(e);
-        }
-      });
-    }
-    if (builder.attributes || additionalAttr) {
-      var build = builder.build(additionalAttr);
-      let tag = "div";
-      let src = "";
-      if (((_a = retrieveTopFill(node.fills)) == null ? void 0 : _a.type) === "IMAGE") {
-        if (!("children" in node) || node.children.length === 0) {
-          build = builder2.build(additionalAttr);
-          tag = "img";
-          src = ` src="https://via.placeholder.com/${node.width.toFixed(0)}x${node.height.toFixed(0)}"`;
-        } else {
-          builder.addAttributes(`bg-[url(https://via.placeholder.com/${node.width.toFixed(0)}x${node.height.toFixed(0)})]`);
-        }
-      }
-      if (build.includes(" px-6 pt-6 pb-8")) {
-        build = build.replace(" px-6 pt-6 pb-8", "");
-        let a = build.split(" ");
-        let b = a.filter((e) => !e.includes("w-") && e != "");
-        build = ' class="' + b.join(" ");
-      }
-      if (children) {
-        return `
-<${tag}${build}${src}>${indentString(children)}
-</${tag}>`;
-      } else if (selfClosingTags.includes(tag) || isJsx) {
-        return `
-<${tag}${build}${src} />`;
-      } else {
-        return `
-<${tag}${build}${src}></${tag}>`;
-      }
-    }
-    return children;
-  };
-  var tailwindLine = (node, isJsx) => {
-    const builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).commonPositionStyles(node, localTailwindSettings.optimizeLayout).commonShapeStyles(node);
-    return `
-<div${builder.build()}></div>`;
-  };
-  var tailwindSection = (obj, isJsx) => {
-    const node = obj.node;
-    const childrenStr = tailwindWidgetGenerator(obj.children, isJsx);
-    const builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, isJsx).size(node, localTailwindSettings.optimizeLayout).position(node, localTailwindSettings.optimizeLayout).customColor(node.fills, "bg");
-    if (childrenStr) {
-      return `
-<div${builder.build()}>${indentString(childrenStr)}
-</div>`;
-    } else {
-      return `
-<div${builder.build()}></div>`;
-    }
-  };
-  var pacvueInput = (node) => {
-    let width = node.width ? `width='${node.width}px'` : "";
-    let textarea = "";
-    if (node.name == "\u6587\u672C\u57DF") {
-      let rows = node.height ? ` :rows="${((node.height - 10) / 21).toFixed(0)}"` : "";
-      textarea = 'type="textarea"' + rows;
-    }
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible);
-    let endTag = "/>";
-    if (visibleChildNode.length == 2) {
-      let symbol = "";
-      visibleChildNode.forEach((n) => {
-        const childN = n;
-        const a = commonSortChildrenWhenInferredAutoLayout(childN, localTailwindSettings.optimizeLayout);
-        const b = a.filter((e) => e.visible);
-        b.forEach((e) => {
-          if (e.type == "TEXT") {
-            const c = e;
-            if (["$", "%"].includes(c.characters)) {
-              symbol = c.characters;
-            }
-          }
-        });
-      });
-      if (symbol == "%") {
-        endTag = `>
-  <template #suffix>
-    <span>${symbol}</span>
-  </template>
-</pacvue-input>`;
-      } else {
-        endTag = `>
-  <template #prefix>
-    <span>${symbol}</span>
-  </template>
-</pacvue-input>`;
-      }
-    }
-    return `
-<pacvue-input ${width} ${textarea}${endTag}`;
-  };
-  var pacvueIcon = (node) => {
-    let iconName = "PacvueIconAmazon";
-    if (node.name == "widget-arrow-down") {
-      iconName = "PacvueIconWidgetArrowDown1";
-    }
-    if (node.name == "widget-arrow-up") {
-      iconName = "PacvueIconWidgetArrowUp1";
-    }
-    if (node.name == "tips-exclamation") {
-      iconName = "PacvueIconTipsExclamation";
-      return `
-<pacvue-tooltip placement="top" effect="dark">
-  <template #content>
-    <div><!-- Tooltip\u6587\u6848 --></div>
-  </template>
-  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>
-</pacvue-tooltip>`;
-    }
-    return `
-<el-icon :size="${node.width}">
-  <${iconName} />
-</el-icon>`;
-  };
-  var isIcon = (node) => {
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible);
-    if (node.type == "INSTANCE" && visibleChildNode.length == 1 && visibleChildNode[0].type == "GROUP") {
-      const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode[0], localTailwindSettings.optimizeLayout);
-      let index = 0;
-      grandChildrNode.forEach((e) => {
-        if (e.name == "Union") {
-          index++;
-        }
-      });
-      return index == 1;
-    }
-    return false;
-  };
-  var getIconName = (node) => {
-    let iconName = "";
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible);
-    const visibleChildNode0 = visibleChildNode[0];
-    const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode0, localTailwindSettings.optimizeLayout);
-    grandChildrNode.forEach((e) => {
-      if (e.type == "RECTANGLE" && e.name != "Union") {
-        iconName = e.name;
-      }
-    });
-    return iconName;
-  };
-  var pacvueContainer = (node) => {
-    var ary = node.name.split("-");
-    var comp = "";
-    const width = node.width ? ` width="${node.width}px"` : "";
-    switch (ary[0]) {
-      case "PacvueSelect":
-        const labelInner = ary[1] ? ` :labelInner="'${ary[1]}'"` : "";
-        comp = `
-<${ary[0]}${width} ${labelInner} />`;
-        break;
-      case "PacvueInput":
-        let endTag = " />";
-        if (ary[1]) {
-          if (ary[1] == "Textarea") {
-            let rows = node.height ? ` :rows="${((node.height - 10) / 21).toFixed(0)}"` : "";
-            endTag = ' type="textarea"' + rows + "/>";
-          } else if (ary[1] == "Search") {
-            endTag = ` >
-  <template #${ary[2]}>
-    <el-icon><PacvueIconSearch /></el-icon>
-  </template>
-</${ary[0]}>`;
-          } else if (ary[1] == "Selection") {
-            let slot = "";
-            if (ary[2]) {
-              const slotType = ary[2] == "%" ? "suffix" : "prefix";
-              slot = `
-  <template #${slotType}>
-    <span>${ary[2]}</span>
-  </template>
-`;
-            }
-            endTag = ` :inputWithSelection="true" :removeDuplication="true">${slot}</${ary[0]}>`;
-          } else if (ary[1] == "%") {
-            endTag = ` >
-  <template #suffix>
-    <span>${ary[1]}</span>
-  </template>
-</${ary[0]}>`;
-          } else {
-            endTag = ` >
-  <template #prefix>
-    <span>${ary[1]}</span>
-  </template>
-</${ary[0]}>`;
-          }
-        }
-        comp = `
-<${ary[0]}${width}${endTag}`;
-        break;
-      case "PacvueDatePicker":
-        comp = `
-<${ary[0]} type="${ary[1]}" />`;
-        break;
-      case "PacvueCheckbox":
-      case "PacvueRadio":
-        const list = node.children.filter((e) => e.type != "PACVUE");
-        const text = tailwindWidgetGenerator(list, false);
-        const line = text.split("\n");
-        if (line.length > 6) {
-          comp = `
-<${ary[0]} style="margin-right: 0"></${ary[0]}>${text}`;
-        } else {
-          comp = `
-<${ary[0]} style="margin-right: 0">${text}
-</${ary[0]}>`;
-        }
-        break;
-      case "PacvueButton":
-        let type = "";
-        let icon = "";
-        let size = node.height == 32 ? ' size="small"' : "";
-        if (ary[1]) {
-          if (ary[1].includes("primary")) {
-            type = ` type="primary"`;
-          }
-          if (ary[1].includes("plain")) {
-            type += " plain";
-          }
-        }
-        if (ary[2]) {
-          icon = `<el-icon :size="20"><${ary[2]}></${ary[2]}></el-icon>`;
-        }
-        comp = `
-<${ary[0]}${type}${size}>${icon}${node.html}</${ary[0]}>`;
-        break;
-      case "PacvueSwitch":
-        comp = `
-<${ary[0]} />`;
-        break;
-      case "PacvueRadioGroup":
-        let builder = new TailwindDefaultBuilder(node.node, localTailwindSettings.layerName, false).commonPositionStyles(node.node, localTailwindSettings.optimizeLayout).commonShapeStyles(node.node);
-        const rowColumn = tailwindAutoLayoutProps(node.node, node.node.inferredAutoLayout);
-        var build = "";
-        if (builder.attributes || rowColumn) {
-          build = builder.build(rowColumn);
-        }
-        comp = `
-<pacvue-radio-group ${build}>${tailwindWidgetGenerator(node.children, false)}
-</pacvue-radio-group>`;
-        break;
-      case "PacvueButtonTab":
-        comp = `
-<pacvue-radio-group>${node.html}
-</pacvue-radio-group>`;
-        break;
-      case "PacvueTab":
-        comp = `
-<PacvueTab tab-position="top">${node.html}
-</PacvueTab>`;
-        break;
-      case "PacvueIcon":
-        if (ary[1] == "PacvueIconTipsExclamation") {
-          return `
-<pacvue-tooltip placement="top" effect="dark">
-  <template #content>
-    <div><!-- Tooltip\u6587\u6848 --></div>
-  </template>
-  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>
-</pacvue-tooltip>`;
-        }
-        comp = `
-<el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`;
-        break;
-      case "PacvueDropdown":
-        const buildClass = node.style.join(" ");
-        comp = `
-<pacvue-dropdown>
-  <template #reference>
-<div class="${buildClass}">    ${tailwindWidgetGenerator(node.children, false)}
-  </div>
-</template>
-</pacvue-dropdown>`;
-        break;
-      default:
-        return "";
-    }
-    return comp;
-  };
-
   // src/worker/backend/tailwind/PacvueIcon.ts
   var svgIcon = {
     "search": "PacvueIconSearch",
@@ -2157,7 +1719,6 @@
     "upload": "PacvueIconUpload",
     "active explorer": "PacvueIconActiveExplorer",
     "all explorer": "PacvueIconAllExplorer",
-    "auto": "",
     "manual": "PacvueIconManual",
     "all-auto&manual": "PacvueIconAllAutoManual",
     "day parting": "PacvueIconDayParting",
@@ -2244,11 +1805,8 @@
     "Reduce bids": "PacvueIconReduceBids",
     "Increase bids": "PacvueIconIncreaseBids",
     "Increase reach": "PacvueIconIncreaseReach",
-    "\u8DF3\u8F6C": "",
-    "back": "",
     "manage tag": "PacvueIconManageTag",
     "Platform": "PacvueIconPlatform",
-    "fangda": "",
     "Apply": "PacvueIconApply",
     "Heat Map": "PacvueIconHeatMap",
     "recommdation": "PacvueIconRecommdation",
@@ -2304,18 +1862,13 @@
     "pat detail": "PacvueIconPatDetail",
     "Arrow left": "PacvueIconLeftArrow",
     "Arrow Right": "PacvueIconRightArrow",
-    "\u5C55\u5F00": "",
     "mobile": "PacvueIconMobile",
     "pc": "PacvueIconPc",
     "import": "PacvueIconImportExport",
     "Audience Expansion": "PacvueIconAudienceExpansion",
     "Row height": "PacvueIconRowHeight",
-    "collect and topping": "",
-    "refresh bid": "",
     "sparkles": "PacvueIconSparkles",
     "Authorize": "PacvueIconAuthorize",
-    "separate 1": "",
-    "Pause": "",
     "Shopping, buybox": "PacvueIconShoppingCart",
     "Ticket \u3001coupon": "PacvueIconDiscountCoupon",
     "Skip": "PacvueIconSkip1",
@@ -2324,21 +1877,21 @@
   };
 
   // src/worker/backend/tailwind/tailwindMain1.ts
-  var localTailwindSettings2;
+  var localTailwindSettings;
   var tailwindMain1 = (sceneNode, settings) => {
-    localTailwindSettings2 = settings;
-    let result = tailwindWidgetGenerator2(sceneNode);
+    localTailwindSettings = settings;
+    let result = tailwindWidgetGenerator(sceneNode);
     return result;
   };
-  var tailwindWidgetGenerator2 = (sceneNode) => {
+  var tailwindWidgetGenerator = (sceneNode) => {
     let array = [];
     const visibleSceneNode = sceneNode.filter((d) => d.visible);
     visibleSceneNode.forEach((node) => {
-      array.push(tailwindContainer2(node));
+      array.push(tailwindContainer(node));
     });
     return array;
   };
-  var tailwindContainer2 = (node) => {
+  var tailwindContainer = (node) => {
     const nodeStyle = node;
     var styleClass = getStyle(nodeStyle);
     let ParentObj = {
@@ -2358,7 +1911,7 @@
     }
     var childrenList = [];
     visibleChildNode.forEach((e) => {
-      childrenList.push(tailwindContainer2(e));
+      childrenList.push(tailwindContainer(e));
     });
     let height = node.height;
     childrenList.forEach((e) => {
@@ -2471,22 +2024,7 @@
       ParentObj.name = "PacvueInput-Textarea";
     } else if (node.name.includes("tab")) {
       ParentObj.type = "PACVUE";
-      let html = "";
-      childrenList.forEach((e) => {
-        const text = getChildrenAllText([e.node], []).join(" ");
-        if (childrenList.some((e2) => {
-          return e2.style.includes("border");
-        })) {
-          ParentObj.name = `PacvueButtonTab`;
-          html += `
-<pacvue-radio-button >${text}</pacvue-radio-button>`;
-        } else {
-          ParentObj.name = `PacvueTab`;
-          html += `
-<el-tab-pane label="${text}"></el-tab-pane>`;
-        }
-      });
-      ParentObj.html = html;
+      ParentObj.name = "PacvueTab";
     } else if (node.name.includes("\u4E3B\u8981\u6309\u94AE") || node.name.includes("\u6B21\u7EA7\u6309\u94AE") || (node.height == 36 || node.height == 32) && styleClass.includes("border") && styleClass.includes("border-[var(--el-color-primary)]")) {
       ParentObj.type = "PACVUE";
       let icon = "-";
@@ -2496,14 +2034,6 @@
       if (iconList.length == 1) {
         const a = iconList[0].name;
         icon += svgIcon[a.trim()];
-      }
-      var textLength = searchByType(visibleChildNode, 0, "TEXT");
-      var textArr = [];
-      if (textLength > 0) {
-        textArr = getChildrenAllText(visibleChildNode, textArr);
-      }
-      if (textArr.length > 0) {
-        ParentObj.html = textArr.join(" ");
       }
       var type = "primaryplain";
       if (styleClass.includes("bg-[var(--el-color-primary)]") || node.name.includes("\u4E3B\u8981\u6309\u94AE")) {
@@ -2587,7 +2117,7 @@
     return arr;
   };
   var getStyle = (node) => {
-    var builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, false).commonPositionStyles(node, localTailwindSettings2.optimizeLayout).commonShapeStyles(node);
+    var builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false).commonPositionStyles(node, localTailwindSettings.optimizeLayout).commonShapeStyles(node);
     switch (node.type) {
       case "RECTANGLE":
       case "ELLIPSE":
@@ -2598,14 +2128,14 @@
       case "COMPONENT_SET":
         break;
       case "GROUP":
-        builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, false).blend(node).size(node, localTailwindSettings2.optimizeLayout).position(node, localTailwindSettings2.optimizeLayout);
+        builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false).blend(node).size(node, localTailwindSettings.optimizeLayout).position(node, localTailwindSettings.optimizeLayout);
         break;
       case "TEXT":
-        let layoutBuilder2 = new TailwindTextBuilder(node, localTailwindSettings2.layerName, false).commonPositionStyles(node, localTailwindSettings2.optimizeLayout).textAlign(node);
+        let layoutBuilder2 = new TailwindTextBuilder(node, localTailwindSettings.layerName, false).commonPositionStyles(node, localTailwindSettings.optimizeLayout).textAlign(node);
         const styledHtml = layoutBuilder2.getTextSegments(node.id);
         break;
       case "SECTION":
-        builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, false).size(node, localTailwindSettings2.optimizeLayout).position(node, localTailwindSettings2.optimizeLayout).customColor(node.fills, "bg");
+        builder = new TailwindDefaultBuilder(node, localTailwindSettings.layerName, false).size(node, localTailwindSettings.optimizeLayout).position(node, localTailwindSettings.optimizeLayout).customColor(node.fills, "bg");
         break;
     }
     const node1 = node;
@@ -2613,6 +2143,461 @@
     var build = [...builder.attributes, ...layoutBuilder.split(" ")];
     var styleClass = uniqueArray(build);
     return styleClass;
+  };
+
+  // src/worker/backend/tailwind/tailwindMain.ts
+  var localTailwindSettings2;
+  var previousExecutionCache;
+  var selfClosingTags = ["img"];
+  var tailwindMain = (sceneNode, settings) => {
+    localTailwindSettings2 = settings;
+    previousExecutionCache = [];
+    let result = tailwindWidgetGenerator2(sceneNode, localTailwindSettings2.jsx);
+    if (result.length > 0 && result.startsWith("\n")) {
+      result = result.slice(1, result.length);
+    }
+    return result;
+  };
+  var tailwindWidgetGenerator2 = (sceneNode, isJsx) => {
+    let comp = "";
+    sceneNode.forEach((e) => {
+      switch (e.type) {
+        case "PACVUE":
+          comp += pacvueContainer(e);
+          break;
+        case "RECTANGLE":
+        case "ELLIPSE":
+          comp += tailwindContainer2(e.node, "", "", isJsx);
+          break;
+        case "GROUP":
+          comp += tailwindGroup(e, isJsx);
+          break;
+        case "INSTANCE":
+        case "FRAME":
+        case "COMPONENT":
+        case "COMPONENT_SET":
+          comp += tailwindFrame(e.node, e, isJsx);
+          break;
+        case "TEXT":
+          comp += tailwindText(e.node, isJsx);
+          break;
+        case "LINE":
+          comp += tailwindLine(e.node, isJsx);
+          break;
+        case "SECTION":
+          comp += tailwindSection(e.node, isJsx);
+          break;
+        case "VECTOR":
+          break;
+      }
+    });
+    return comp;
+  };
+  var tailwindFrame = (node, obj, isJsx) => {
+    const width = node.width ? `width='${node.width}px'` : "";
+    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
+    if (node.name == "\u5355\u9009\u6846+\u6587\u5B57") {
+      return tailwindWidgetGenerator2(obj.children, isJsx);
+    }
+    const visibleChildNode = childrNode.filter((e) => e.visible);
+    const visibleChildNode0 = visibleChildNode[0];
+    if (visibleChildNode.length == 1 && visibleChildNode[0].name == "Input") {
+      return pacvueInput(visibleChildNode0);
+    }
+    if (visibleChildNode.length == 2) {
+      if (visibleChildNode[1].name == "top bar-arrow-down") {
+        const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode0, localTailwindSettings2.optimizeLayout);
+        const visibleGrandChildNode = grandChildrNode.filter((e) => e.visible);
+        if (visibleGrandChildNode.length > 1 && visibleGrandChildNode[0].name == "Vendor" && visibleGrandChildNode[1].name == "Rectangle 539") {
+          const grandChildrNodeText = grandChildrNode[0];
+          let text = grandChildrNodeText.characters;
+          return `
+<pacvue-select ${width} :labelInner="'${text}'" />`;
+        }
+      }
+    }
+    if (visibleChildNode.length >= 2) {
+      const visibleChildNodelast = visibleChildNode[visibleChildNode.length - 1];
+      if (isIcon(visibleChildNodelast)) {
+        if (getIconName(visibleChildNodelast) == "Rectangle 1138") {
+          return '\n<PacvueDatePicker type="daterange" />';
+        }
+      }
+    }
+    if (isIcon(node)) {
+      return pacvueIcon(node);
+    }
+    const childrenStr = tailwindWidgetGenerator2(obj.children, isJsx);
+    var rowColumn = "";
+    if (obj.children.length > 1) {
+      if (node.layoutMode !== "NONE") {
+        rowColumn = tailwindAutoLayoutProps(node, node);
+      } else if (localTailwindSettings2.optimizeLayout && node.inferredAutoLayout !== null) {
+        rowColumn = tailwindAutoLayoutProps(node, node.inferredAutoLayout);
+      }
+    }
+    return tailwindContainer2(node, childrenStr, rowColumn, isJsx);
+  };
+  var tailwindGroup = (obj, isJsx = false) => {
+    const node = obj.node;
+    if (obj.width < 0 || node.height <= 0 || node.children.length === 0) {
+      return "";
+    }
+    const builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, isJsx).blend(node);
+    builder.size1(obj);
+    builder.position(node, localTailwindSettings2.optimizeLayout);
+    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
+    const visibleChildNode = childrNode.filter((e) => e.visible && ["RECTANGLE", "VECTOR"].includes(e.type) || e.name.includes("\u77E9\u5F62"));
+    if (visibleChildNode.length > 1) {
+      visibleChildNode.forEach((e) => {
+        var _a;
+        const cnode = node;
+        if (((_a = retrieveTopFill(cnode.fills)) == null ? void 0 : _a.type) !== "IMAGE") {
+          builder.border(e);
+        }
+      });
+    }
+    if (builder.attributes || builder.style) {
+      const attr = builder.build("");
+      const generator = tailwindWidgetGenerator2(obj.children, isJsx);
+      return `
+<div${attr}>${indentString(generator)}
+</div>`;
+    }
+    return tailwindWidgetGenerator2(obj.children, isJsx);
+  };
+  var tailwindText = (node, isJsx) => {
+    let layoutBuilder = new TailwindTextBuilder(node, localTailwindSettings2.layerName, isJsx).commonPositionStyles(node, localTailwindSettings2.optimizeLayout).textAlign(node);
+    const styledHtml = layoutBuilder.getTextSegments(node.id);
+    previousExecutionCache.push(...styledHtml);
+    let content = "";
+    if (styledHtml.length === 1) {
+      layoutBuilder.addAttributes(styledHtml[0].style);
+      content = styledHtml[0].text;
+    } else {
+      content = styledHtml.map((style) => `<span class="${style.style}">${style.text}</span>`).join("");
+    }
+    return `
+<div${layoutBuilder.build()}>${content}</div>`;
+  };
+  var tailwindContainer2 = (node, children, additionalAttr, isJsx) => {
+    var _a;
+    if (node.width < 0 || node.height < 0) {
+      return children;
+    }
+    let builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, isJsx).commonPositionStyles(node, localTailwindSettings2.optimizeLayout).commonShapeStyles(node);
+    let builder2 = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, isJsx).commonShapeStyles(node);
+    const asnode = node;
+    const childrNode = commonSortChildrenWhenInferredAutoLayout(asnode, localTailwindSettings2.optimizeLayout);
+    const visibleChildNode = childrNode.filter((e) => e.visible && ["RECTANGLE", "VECTOR"].includes(e.type) && e.name.includes("\u77E9\u5F62"));
+    if (visibleChildNode.length > 1) {
+      visibleChildNode.forEach((e) => {
+        var _a2;
+        const cnode = node;
+        if (((_a2 = retrieveTopFill(cnode.fills)) == null ? void 0 : _a2.type) !== "IMAGE") {
+          builder.border(e);
+        }
+      });
+    }
+    if (builder.attributes || additionalAttr) {
+      var build = builder.build(additionalAttr);
+      let tag = "div";
+      let src = "";
+      if (((_a = retrieveTopFill(node.fills)) == null ? void 0 : _a.type) === "IMAGE") {
+        if (!("children" in node) || node.children.length === 0) {
+          build = builder2.build(additionalAttr);
+          tag = "img";
+          src = ` src="https://via.placeholder.com/${node.width.toFixed(0)}x${node.height.toFixed(0)}"`;
+        } else {
+          builder.addAttributes(`bg-[url(https://via.placeholder.com/${node.width.toFixed(0)}x${node.height.toFixed(0)})]`);
+        }
+      }
+      if (build.includes(" px-6 pt-6 pb-8")) {
+        build = build.replace(" px-6 pt-6 pb-8", "");
+        let a = build.split(" ");
+        let b = a.filter((e) => !e.includes("w-") && e != "");
+        build = ' class="' + b.join(" ");
+      }
+      if (children) {
+        return `
+<${tag}${build}${src}>${indentString(children)}
+</${tag}>`;
+      } else if (selfClosingTags.includes(tag) || isJsx) {
+        return `
+<${tag}${build}${src} />`;
+      } else {
+        return `
+<${tag}${build}${src}></${tag}>`;
+      }
+    }
+    return children;
+  };
+  var tailwindLine = (node, isJsx) => {
+    const builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, isJsx).commonPositionStyles(node, localTailwindSettings2.optimizeLayout).commonShapeStyles(node);
+    return `
+<div${builder.build()}></div>`;
+  };
+  var tailwindSection = (obj, isJsx) => {
+    const node = obj.node;
+    const childrenStr = tailwindWidgetGenerator2(obj.children, isJsx);
+    const builder = new TailwindDefaultBuilder(node, localTailwindSettings2.layerName, isJsx).size(node, localTailwindSettings2.optimizeLayout).position(node, localTailwindSettings2.optimizeLayout).customColor(node.fills, "bg");
+    if (childrenStr) {
+      return `
+<div${builder.build()}>${indentString(childrenStr)}
+</div>`;
+    } else {
+      return `
+<div${builder.build()}></div>`;
+    }
+  };
+  var pacvueInput = (node) => {
+    let width = node.width ? `width='${node.width}px'` : "";
+    let textarea = "";
+    if (node.name == "\u6587\u672C\u57DF") {
+      let rows = node.height ? ` :rows="${((node.height - 10) / 21).toFixed(0)}"` : "";
+      textarea = 'type="textarea"' + rows;
+    }
+    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
+    const visibleChildNode = childrNode.filter((e) => e.visible);
+    let endTag = "/>";
+    if (visibleChildNode.length == 2) {
+      let symbol = "";
+      visibleChildNode.forEach((n) => {
+        const childN = n;
+        const a = commonSortChildrenWhenInferredAutoLayout(childN, localTailwindSettings2.optimizeLayout);
+        const b = a.filter((e) => e.visible);
+        b.forEach((e) => {
+          if (e.type == "TEXT") {
+            const c = e;
+            if (["$", "%"].includes(c.characters)) {
+              symbol = c.characters;
+            }
+          }
+        });
+      });
+      if (symbol == "%") {
+        endTag = `>
+  <template #suffix>
+    <span>${symbol}</span>
+  </template>
+</pacvue-input>`;
+      } else {
+        endTag = `>
+  <template #prefix>
+    <span>${symbol}</span>
+  </template>
+</pacvue-input>`;
+      }
+    }
+    return `
+<pacvue-input ${width} ${textarea}${endTag}`;
+  };
+  var pacvueIcon = (node) => {
+    let iconName = "PacvueIconAmazon";
+    if (node.name == "widget-arrow-down") {
+      iconName = "PacvueIconWidgetArrowDown1";
+    }
+    if (node.name == "widget-arrow-up") {
+      iconName = "PacvueIconWidgetArrowUp1";
+    }
+    if (node.name == "tips-exclamation") {
+      iconName = "PacvueIconTipsExclamation";
+      return `
+<pacvue-tooltip placement="top" effect="dark">
+  <template #content>
+    <div><!-- Tooltip\u6587\u6848 --></div>
+  </template>
+  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>
+</pacvue-tooltip>`;
+    }
+    return `
+<el-icon :size="${node.width}">
+  <${iconName} />
+</el-icon>`;
+  };
+  var isIcon = (node) => {
+    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
+    const visibleChildNode = childrNode.filter((e) => e.visible);
+    if (node.type == "INSTANCE" && visibleChildNode.length == 1 && visibleChildNode[0].type == "GROUP") {
+      const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode[0], localTailwindSettings2.optimizeLayout);
+      let index = 0;
+      grandChildrNode.forEach((e) => {
+        if (e.name == "Union") {
+          index++;
+        }
+      });
+      return index == 1;
+    }
+    return false;
+  };
+  var getIconName = (node) => {
+    let iconName = "";
+    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
+    const visibleChildNode = childrNode.filter((e) => e.visible);
+    const visibleChildNode0 = visibleChildNode[0];
+    const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode0, localTailwindSettings2.optimizeLayout);
+    grandChildrNode.forEach((e) => {
+      if (e.type == "RECTANGLE" && e.name != "Union") {
+        iconName = e.name;
+      }
+    });
+    return iconName;
+  };
+  var pacvueContainer = (node) => {
+    var ary = node.name.split("-");
+    var comp = "";
+    const width = node.width ? ` width="${node.width}px"` : "";
+    switch (ary[0]) {
+      case "PacvueSelect":
+        const labelInner = ary[1] ? ` :labelInner="'${ary[1]}'"` : "";
+        comp = `
+<${ary[0]}${width} ${labelInner} />`;
+        break;
+      case "PacvueInput":
+        let endTag = " />";
+        if (ary[1]) {
+          if (ary[1] == "Textarea") {
+            let rows = node.height ? ` :rows="${((node.height - 10) / 21).toFixed(0)}"` : "";
+            endTag = ' type="textarea"' + rows + "/>";
+          } else if (ary[1] == "Search") {
+            endTag = ` >
+  <template #${ary[2]}>
+    <el-icon><PacvueIconSearch /></el-icon>
+  </template>
+</${ary[0]}>`;
+          } else if (ary[1] == "Selection") {
+            let slot = "";
+            if (ary[2]) {
+              const slotType = ary[2] == "%" ? "suffix" : "prefix";
+              slot = `
+  <template #${slotType}>
+    <span>${ary[2]}</span>
+  </template>
+`;
+            }
+            endTag = ` :inputWithSelection="true" :removeDuplication="true">${slot}</${ary[0]}>`;
+          } else if (ary[1] == "%") {
+            endTag = ` >
+  <template #suffix>
+    <span>${ary[1]}</span>
+  </template>
+</${ary[0]}>`;
+          } else {
+            endTag = ` >
+  <template #prefix>
+    <span>${ary[1]}</span>
+  </template>
+</${ary[0]}>`;
+          }
+        }
+        comp = `
+<${ary[0]}${width}${endTag}`;
+        break;
+      case "PacvueDatePicker":
+        comp = `
+<${ary[0]} type="${ary[1]}" />`;
+        break;
+      case "PacvueCheckbox":
+      case "PacvueRadio":
+        const list = node.children.filter((e) => e.type != "PACVUE");
+        const text = tailwindWidgetGenerator2(list, false);
+        const line = text.split("\n");
+        if (line.length > 6) {
+          comp = `
+<${ary[0]} style="margin-right: 0"></${ary[0]}>${text}`;
+        } else {
+          comp = `
+<${ary[0]} style="margin-right: 0">${text}
+</${ary[0]}>`;
+        }
+        break;
+      case "PacvueButton":
+        let nodeClone = node.node;
+        let html = getChildrenAllText(node.node.children, []).join(" ");
+        if (node.children.length > 1) {
+          const child = tailwindWidgetGenerator2(node.children, false);
+          const flexStyle = tailwindAutoLayoutProps(nodeClone, nodeClone);
+          html = `
+<div class="${flexStyle}">${child}
+</div>
+`;
+        }
+        let type = "";
+        let size = node.height == 32 ? ' size="small"' : "";
+        if (ary[1]) {
+          if (ary[1].includes("primary")) {
+            type = ` type="primary"`;
+          }
+          if (ary[1].includes("plain")) {
+            type += " plain";
+          }
+        }
+        comp = `
+<${ary[0]}${type}${size}>${html}</${ary[0]}>`;
+        break;
+      case "PacvueSwitch":
+        comp = `
+<${ary[0]} />`;
+        break;
+      case "PacvueRadioGroup":
+        let builder = new TailwindDefaultBuilder(node.node, localTailwindSettings2.layerName, false).commonPositionStyles(node.node, localTailwindSettings2.optimizeLayout).commonShapeStyles(node.node);
+        const rowColumn = tailwindAutoLayoutProps(node.node, node.node.inferredAutoLayout);
+        var build = "";
+        if (builder.attributes || rowColumn) {
+          build = builder.build(rowColumn);
+        }
+        comp = `
+<pacvue-radio-group ${build}>${tailwindWidgetGenerator2(node.children, false)}
+</pacvue-radio-group>`;
+        break;
+      case "PacvueTab":
+        let tabhtml = "";
+        node.children.forEach((e) => {
+          const text2 = getChildrenAllText([e.node], []).join(" ");
+          if (node.children.some((a) => {
+            return a.style.includes("border");
+          })) {
+            tabhtml += `
+  <pacvue-radio-button >${text2}</pacvue-radio-button>`;
+            comp = `
+<pacvue-radio-group>${tabhtml}
+</pacvue-radio-group>`;
+          } else {
+            tabhtml += `
+  <el-tab-pane label="${text2}"></el-tab-pane>`;
+            comp = `
+<PacvueTab tab-position="top">${tabhtml}
+</PacvueTab>`;
+          }
+        });
+        break;
+      case "PacvueIcon":
+        if (ary[1] == "PacvueIconTipsExclamation") {
+          return `
+<pacvue-tooltip placement="top" effect="dark">
+  <template #content>
+    <div><!-- Tooltip\u6587\u6848 --></div>
+  </template>
+  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>
+</pacvue-tooltip>`;
+        }
+        comp = `
+<el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`;
+        break;
+      case "PacvueDropdown":
+        const buildClass = node.style.join(" ");
+        comp = `
+<pacvue-dropdown>
+  <template #reference>
+<div class="${buildClass}">    ${tailwindWidgetGenerator2(node.children, false)}
+  </div>
+</template>
+</pacvue-dropdown>`;
+        break;
+      default:
+        return "";
+    }
+    return comp;
   };
 
   // src/worker/backend/style/builderImpl/htmlColor.ts

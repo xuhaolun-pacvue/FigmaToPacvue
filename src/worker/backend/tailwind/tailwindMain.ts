@@ -6,6 +6,7 @@ import { commonSortChildrenWhenInferredAutoLayout } from "../common/commonChildr
 import { tailwindAutoLayoutProps } from "./builderImpl/tailwindAutoLayout";
 import { TailwindDefaultBuilder } from "./tailwindDefaultBuilder";
 import { TailwindTextBuilder } from "./tailwindTextBuilder";
+import { getChildrenAllText } from "./tailwindMain1"
 
 export let localTailwindSettings: PluginSettings;
 
@@ -376,8 +377,14 @@ const pacvueContainer = (node:any): string=>{
 			}
 			break
 		case 'PacvueButton':
+			let nodeClone = node.node
+			let html = getChildrenAllText(node.node.children, []).join(' ')
+			if(node.children.length > 1){
+				const child = tailwindWidgetGenerator(node.children, false)
+				const flexStyle = tailwindAutoLayoutProps(nodeClone, nodeClone)
+				html = `\n<div class="${flexStyle}">${child}\n</div>\n`
+			}
 			let type = ""
-			let icon = ""
 			let size = node.height == 32 ? ' size="small"' : ""
 			if(ary[1]){
 				if(ary[1].includes('primary')){
@@ -387,10 +394,7 @@ const pacvueContainer = (node:any): string=>{
 					type += ' plain'
 				}
 			}
-			if(ary[2]){
-				icon = `<el-icon :size="20"><${ary[2]}></${ary[2]}></el-icon>`
-			}
-			comp = `\n<${ary[0]}${type}${size}>${icon}${node.html}</${ary[0]}>`
+			comp = `\n<${ary[0]}${type}${size}>${html}</${ary[0]}>`
 			break
 		case 'PacvueSwitch':
 			comp = `\n<${ary[0]} />`
@@ -404,11 +408,18 @@ const pacvueContainer = (node:any): string=>{
 			}
 			comp = `\n<pacvue-radio-group ${build}>${tailwindWidgetGenerator(node.children, false)}\n</pacvue-radio-group>`
 			break
-		case 'PacvueButtonTab':
-			comp = `\n<pacvue-radio-group>${node.html}\n</pacvue-radio-group>`
-			break
 		case 'PacvueTab':
-			comp = `\n<PacvueTab tab-position="top">${node.html}\n</PacvueTab>`
+			let tabhtml = ''
+			node.children.forEach((e: any)=>{
+				const text = getChildrenAllText([e.node], []).join(' ')
+				if(node.children.some((a: any)=>{ return a.style.includes('border') })){
+					tabhtml += `\n  <pacvue-radio-button >${ text }</pacvue-radio-button>`
+					comp = `\n<pacvue-radio-group>${tabhtml}\n</pacvue-radio-group>`
+				}else{
+					tabhtml += `\n  <el-tab-pane label="${ text }"></el-tab-pane>`
+					comp = `\n<PacvueTab tab-position="top">${tabhtml}\n</PacvueTab>`
+				}
+			})
 			break
 		case 'PacvueIcon':
 			if(ary[1] == 'PacvueIconTipsExclamation'){

@@ -163,20 +163,7 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 		ParentObj.name = 'PacvueInput-Textarea';
 	} else if (node.name.includes('tab')) {
 		ParentObj.type = 'PACVUE';
-		let html = ''
-		childrenList.forEach(e=>{
-			const text = getChildrenAllText([e.node], []).join(' ')
-			if(childrenList.some(e=>{
-				return e.style.includes('border')
-			})){
-				ParentObj.name = `PacvueButtonTab`;
-				html += `\n<pacvue-radio-button >${ text }</pacvue-radio-button>`
-			}else{
-				ParentObj.name = `PacvueTab`;
-				html += `\n<el-tab-pane label="${ text }"></el-tab-pane>`
-			}
-		})
-		ParentObj.html = html
+		ParentObj.name = 'PacvueTab';
 	} else if ((node.name.includes('主要按钮') || node.name.includes('次级按钮')) || ((node.height == 36 || node.height == 32) && styleClass.includes("border") &&styleClass.includes("border-[var(--el-color-primary)]"))) {
 		ParentObj.type = 'PACVUE';
 		let icon = '-';
@@ -186,14 +173,6 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 		if (iconList.length == 1) {
 			const a: string = iconList[0].name;
 			icon += (svgIcon as { [key: string]: string })[a.trim()];
-		}
-		var textLength = searchByType(visibleChildNode, 0, 'TEXT')
-		var textArr: string[] = []
-		if(textLength > 0){
-			textArr = getChildrenAllText(visibleChildNode, textArr)
-		}
-		if(textArr.length > 0){
-			ParentObj.html = textArr.join(' ')
 		}
 		var type = 'primaryplain'
 		if(styleClass.includes("bg-[var(--el-color-primary)]") || node.name.includes('主要按钮')){
@@ -277,7 +256,7 @@ const searchByType = (nodeList: SceneNode[], num: number, searchName: string): n
 	})
 	return num
 }
-const getChildrenAllText = (nodeList: SceneNode[], arr: string[]): string[]=>{
+export const getChildrenAllText = (nodeList: SceneNode[], arr: string[]): string[]=>{
 	/* 获取子级所有的文本 */
 	nodeList.forEach(e=>{
 		const n = e as SceneNode & ChildrenMixin
