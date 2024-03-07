@@ -1,6 +1,50 @@
 import { sliceNum } from "../../common/numToAutoFixed";
 import { retrieveTopFill } from "../../common/retrieveFill";
 
+const pacvueColors: Record<string, string> = {
+	'#ffffff': '--el-color-white',
+	'#000000': '--el-color-black',
+	'#ff9f43': '--el-color-primary',
+	'#ffbc7b': '--el-color-primary-light-3',
+	'#ffcfa1': '--el-color-primary-light-5',
+	'#ffe2c7': '--el-color-primary-light-7',
+	'#ffecd9': '--el-color-primary-light-8',
+	'#fff5ec': '--el-color-primary-light-9',
+	'#cc7f36': '--el-color-primary-dark-2',
+	'#28c76f': '--el-color-success',
+	'#69d89a': '--el-color-success-light-3',
+	'#94e3b7': '--el-color-success-light-5',
+	'#bfeed4': '--el-color-success-light-7',
+	'#d4f4e2': '--el-color-success-light-8',
+	'#eaf9f1': '--el-color-success-light-9',
+	'#209f59': '--el-color-success-dark-2',
+	'#ea5455': '--el-color-danger',
+	'#f08788': '--el-color-danger-light-3',
+	'#f5aaaa': '--el-color-danger-light-5',
+	'#f9cccc': '--el-color-danger-light-7',
+	'#fbdddd': '--el-color-danger-light-8',
+	'#fdeeee': '--el-color-danger-light-9',
+	'#bb4344': '--el-color-danger-dark-2',
+	'#82858b': '--el-color-info',
+	'#a8aaae': '--el-color-info-light-3',
+	'#c1c2c5': '--el-color-info-light-5',
+	'#dadadc': '--el-color-info-light-7',
+	'#e6e7e8': '--el-color-info-light-8',
+	'#f3f3f3': '--el-color-info-light-9',
+	'#686a6f': '--el-color-info-dark-2',
+	'#f2f3f5': '--el-bg-color-page',
+	'#5e5873': '--el-text-color-primary',
+	'#45464f': '--color-title--',
+	'#66666c': '--color-text--', 
+	'#b2b2b8': '--color-info--',
+	'#dedfe3': '--icon-disabled--',
+	'#fff1e3': '--hover-color--',
+	'#f4f5f6': '--el-input-disable-bg--',
+	'#b2b2b2': '--pac-disabled-text-color--',
+	'#d9d9d9': '--pac-upload-border-color',
+	'#1890ff': '--pac-href-color1',
+	'#0D6EFD': '--pac-href-color',
+}
 // retrieve the SOLID color on HTML
 export const htmlColorFromFills = (
   fills: ReadonlyArray<Paint> | PluginAPI["mixed"]
@@ -33,11 +77,11 @@ export const htmlColorFromFills = (
 
 export const htmlColor = (color: RGB, alpha: number = 1): string => {
   if (color.r === 1 && color.g === 1 && color.b === 1 && alpha === 1) {
-    return "white";
+    return "var(--el-color-white)";
   }
 
   if (color.r === 0 && color.g === 0 && color.b === 0 && alpha === 1) {
-    return "black";
+    return "var(--el-color-black)";
   }
 
   // Return # when possible.
@@ -47,7 +91,11 @@ export const htmlColor = (color: RGB, alpha: number = 1): string => {
     const b = Math.round(color.b * 255);
 
     const toHex = (num: number): string => num.toString(16).padStart(2, "0");
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+    const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`.toLowerCase()
+    if(pacvueColors[hexColor]){
+      return `var(${pacvueColors[hexColor]})`
+    }
+    return hexColor.toUpperCase();
   }
 
   const r = sliceNum(color.r * 255);

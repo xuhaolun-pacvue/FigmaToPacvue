@@ -22,29 +22,43 @@ export const htmlPadding = (
 
   // horizontal and vertical, as the default AutoLayout
   if ("horizontal" in padding) {
-    if (padding.horizontal !== 0) {
-      comp.push(formatWithJSX("padding-left", isJsx, padding.horizontal));
-      comp.push(formatWithJSX("padding-right", isJsx, padding.horizontal));
-    }
-    if (padding.vertical !== 0) {
-      comp.push(formatWithJSX("padding-top", isJsx, padding.vertical));
-      comp.push(formatWithJSX("padding-bottom", isJsx, padding.vertical));
+    if (padding.horizontal !== 0 || padding.vertical !== 0) {
+      let y = padding.vertical !== 0 ? padding.vertical + 'px' : 0;
+      let x = padding.horizontal !== 0 ? padding.horizontal + 'px' : 0;
+      let paddingxy = `${y} ${x}`;
+      comp.push(formatWithJSX("padding", isJsx, paddingxy));
     }
     return comp;
   }
-
-  if (padding.top !== 0) {
-    comp.push(formatWithJSX("padding-top", isJsx, padding.top));
+  let index = 0
+  const directions: Array<keyof typeof padding> = ['top', 'bottom', 'left', 'right'];
+  directions.forEach(direction => {
+    if (padding[direction] !== 0) {
+      index++;
+    }
+  });
+  if(index <= 2){
+    if (padding.top !== 0) {
+      comp.push(formatWithJSX("padding-top", isJsx, padding.top));
+    }
+    if (padding.bottom !== 0) {
+      comp.push(formatWithJSX("padding-bottom", isJsx, padding.bottom));
+    }
+    if (padding.left !== 0) {
+      comp.push(formatWithJSX("padding-left", isJsx, padding.left));
+    }
+    if (padding.right !== 0) {
+      comp.push(formatWithJSX("padding-right", isJsx, padding.right));
+    }
+  }else{
+    const top = padding.top !== 0 ? padding.top + 'px' : 0;
+    const bottom = padding.top !== 0 ? padding.top + 'px' : 0;
+    const left = padding.top !== 0 ? padding.top + 'px' : 0;
+    const right = padding.top !== 0 ? padding.top + 'px' : 0;
+    let p = `${top} ${right} ${bottom} ${left}`;
+    comp.push(formatWithJSX("padding", isJsx, p));
   }
-  if (padding.bottom !== 0) {
-    comp.push(formatWithJSX("padding-bottom", isJsx, padding.bottom));
-  }
-  if (padding.left !== 0) {
-    comp.push(formatWithJSX("padding-left", isJsx, padding.left));
-  }
-  if (padding.right !== 0) {
-    comp.push(formatWithJSX("padding-right", isJsx, padding.right));
-  }
+  
   // todo use REM
 
   return comp;

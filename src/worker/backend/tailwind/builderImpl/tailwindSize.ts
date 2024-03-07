@@ -8,15 +8,17 @@ export const tailwindSizePartial = (
 	optimizeLayout: boolean
 ): { width: string; height: string } => {
 	const size = nodeSize(node, optimizeLayout);
-
+	const node1 = node as  SceneNode & ChildrenMixin;
 	const nodeParent =
 		(node.parent && optimizeLayout && "inferredAutoLayout" in node.parent
 			? node.parent.inferredAutoLayout
 			: null) ?? node.parent;
-
 	let w = "";
-	if (typeof size.width === "number") {
-		w = `w-${pxToLayoutSize(size.width)}`;
+	const isReactive = node.type === "GROUP" || ("layoutMode" in node && ((optimizeLayout ? node.inferredAutoLayout : null) ?? node)?.layoutMode === "NONE")
+	if (typeof size.width === "number" ) {
+		if((!node1.children && node.type!="TEXT") || isReactive){
+			w = `w-${pxToLayoutSize(size.width)}`;
+		}
 	} else if (size.width === "fill") {
 		if (
 			nodeParent &&
@@ -30,8 +32,10 @@ export const tailwindSizePartial = (
 	}
 
 	let h = "";
-	if (typeof size.height === "number") {
-		h = `h-${pxToLayoutSize(size.height)}`;
+	if (typeof size.height === "number"	) {
+		if((!node1.children && node.type!="TEXT") || isReactive){
+			h = `h-${pxToLayoutSize(size.height)}`;
+		}
 	} else if (size.height === "fill") {
 		if (
 			size.height === "fill" &&

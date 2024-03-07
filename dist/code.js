@@ -1158,12 +1158,16 @@
 
   // src/worker/backend/tailwind/builderImpl/tailwindSize.ts
   var tailwindSizePartial = (node, optimizeLayout) => {
-    var _a;
+    var _a, _b, _c;
     const size = nodeSize(node, optimizeLayout);
+    const node1 = node;
     const nodeParent = (_a = node.parent && optimizeLayout && "inferredAutoLayout" in node.parent ? node.parent.inferredAutoLayout : null) != null ? _a : node.parent;
     let w = "";
+    const isReactive = node.type === "GROUP" || "layoutMode" in node && ((_c = (_b = optimizeLayout ? node.inferredAutoLayout : null) != null ? _b : node) == null ? void 0 : _c.layoutMode) === "NONE";
     if (typeof size.width === "number") {
-      w = `w-${pxToLayoutSize(size.width)}`;
+      if (!node1.children && node.type != "TEXT" || isReactive) {
+        w = `w-${pxToLayoutSize(size.width)}`;
+      }
     } else if (size.width === "fill") {
       if (nodeParent && "layoutMode" in nodeParent && nodeParent.layoutMode === "HORIZONTAL") {
         w = `grow shrink basis-0`;
@@ -1173,7 +1177,9 @@
     }
     let h = "";
     if (typeof size.height === "number") {
-      h = `h-${pxToLayoutSize(size.height)}`;
+      if (!node1.children && node.type != "TEXT" || isReactive) {
+        h = `h-${pxToLayoutSize(size.height)}`;
+      }
     } else if (size.height === "fill") {
       if (size.height === "fill" && nodeParent && "layoutMode" in nodeParent && nodeParent.layoutMode === "VERTICAL") {
         h = `grow shrink basis-0`;
@@ -1928,11 +1934,11 @@
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueRadio";
     }
-    if (childrenList.length > 1 && childrenList.filter((e) => e.name == "PacvueRadio").length == childrenList.length) {
+    if (isAllPacvueRadio(childrenList)) {
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueRadioGroup";
       ParentObj.children = childrenList;
-    } else if (node.height < 40 && node.height > 30 && (styleClass.includes("rounded-md") || styleClass.includes("rounded")) && styleClass.includes("border") && styleClass.includes("border-[var(--icon-disabled--)]")) {
+    } else if (isCustomButton(node, styleClass)) {
       if (node.height != node.width) {
         const newClass = styleClass.filter((e) => e != "rounded-md" && e != "rounded" && e != "border" && e != "border-[var(--icon-disabled--)]" && e != "h-9" && e != "h-8" && !e.includes("px") && !e.includes("py"));
         const dateNum = searchByName(visibleChildNode, 0, "Rectangle 1138");
@@ -1978,7 +1984,7 @@
         }
         ParentObj.name = `PacvueButton-${icon}`;
       }
-    } else if (childrenList.length == 2 && childrenList[0].style.includes("rounded-tl rounded-bl") && childrenList[1].style.includes("rounded-tr rounded-br") && arrowNum == 1) {
+    } else if (isArrowBlock(childrenList, arrowNum)) {
       ParentObj.type = "PACVUE";
       var textLength = searchByType(visibleChildNode, 0, "TEXT");
       var textArr = [];
@@ -1992,40 +1998,40 @@
         }
       });
       ParentObj.name = name;
-    } else if (node.height == node.width && node.height == 18 || node.name == "\u591A\u9009\u6846") {
+    } else if (isCheckbox(node)) {
       ParentObj.type = "PACVUE";
       ParentObj.name = "Checkbox";
-    } else if (node.height == node.width && node.height == 20 && styleClass.includes("rounded-full") || node.name == "\u5355\u9009\u6846") {
+    } else if (isRadioButton(node, styleClass)) {
       ParentObj.type = "PACVUE";
       ParentObj.name = "Radio";
-    } else if (childrenList.some((e) => ["top bar-arrow-down", "PacvueIcon-PacvueIconTopBarArrowDown"].includes(e.name))) {
+    } else if (hasArrowDownElement(childrenList)) {
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueDropdown";
       ParentObj.children = childrenList;
-    } else if (node.name == "\u5F00\u5173") {
+    } else if (isSwitch(node)) {
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueSwitch";
-    } else if (node.name == "\u6587\u672C\u57DF") {
+    } else if (isTextArea(node)) {
       if (childrenList.some((e) => ["\u6587\u672C\u57DF", "PacvueInput-Textarea"].includes(e.name))) {
         ParentObj.type = "PACVUE";
         ParentObj.name = "PacvueInput-Textarea";
       } else {
         ParentObj.children = childrenList;
       }
-    } else if (node.name == "\u641C\u7D22\u6846") {
+    } else if (isSearchBox(node)) {
       let slot = "-prefix";
       if (childrenList.length == 1 && childrenList[0].name == "Search\u5728\u540E") {
         slot = "-append";
       }
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueInput-Search" + slot;
-    } else if (childrenList.length == 1 && childrenList[0].name == "Input" && node.height >= 40) {
+    } else if (isInputWithHeight(node, childrenList)) {
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueInput-Textarea";
-    } else if (node.name.includes("tab")) {
+    } else if (isTab(node)) {
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueTab";
-    } else if (node.name.includes("\u4E3B\u8981\u6309\u94AE") || node.name.includes("\u6B21\u7EA7\u6309\u94AE") || (node.height == 36 || node.height == 32) && styleClass.includes("border") && styleClass.includes("border-[var(--el-color-primary)]")) {
+    } else if (isPrimaryOrSecondaryButton(node, styleClass)) {
       ParentObj.type = "PACVUE";
       let icon = "-";
       const iconList = visibleChildNode.filter((e) => {
@@ -2040,7 +2046,7 @@
         type = "primary";
       }
       ParentObj.name = `PacvueButton-${type}${icon}`;
-    } else if (node.name.includes("\u7070\u8272\u6309\u94AE") || node.name.toLocaleLowerCase().includes("button")) {
+    } else if (isGrayButton(node)) {
       ParentObj.type = "PACVUE";
       let name = "PacvueButton";
       let type2 = "primary";
@@ -2051,21 +2057,79 @@
         type2 = "plain";
       }
       ParentObj.name = `${name}-${type2}`;
-    } else if (node.width == node.height && node.width < 26 && (node.type == "INSTANCE" || childrenList.some((e) => e.name == "Union"))) {
+    } else if (isSmallSizedElement(node, childrenList)) {
       ParentObj.type = "PACVUE";
       const a = node.name;
       let icon = svgIcon[a.trim()];
       ParentObj.name = `PacvueIcon-${icon}`;
     }
     const pacvueChildren = childrenList.filter((e) => e.type == "PACVUE");
+    const conditions = ["bg-", "border-", "grow", "px-", "py-", "pt-", "pr-", "pb-", "pl-", "p-"];
     if (ParentObj.type != "PACVUE" && childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some((e) => {
-      return e.includes("bg-") || e.includes("border-") || e.includes("grow");
+      return conditions.some((cond) => e.includes(cond));
     }))) {
       return childrenList[0];
     } else {
       ParentObj.children = childrenList;
     }
     return ParentObj;
+  };
+  var isAllPacvueRadio = (childrenList) => {
+    return childrenList.length > 1 && childrenList.filter((e) => e.name == "PacvueRadio").length == childrenList.length;
+  };
+  var isCustomButton = (node, styleClass) => {
+    const isHeightInRange = node.height < 40 && node.height > 30;
+    const hasRoundedClass = styleClass.includes("rounded-md") || styleClass.includes("rounded");
+    const hasBorderClass = styleClass.includes("border");
+    const hasIconDisabledBorder = styleClass.includes("border-[var(--icon-disabled--)]");
+    return isHeightInRange && hasRoundedClass && hasBorderClass && hasIconDisabledBorder;
+  };
+  var isArrowBlock = (childrenList, arrowNum) => {
+    var _a, _b;
+    const hasTwoChildren = childrenList.length === 2;
+    const isFirstChildRounded = (_a = childrenList[0]) == null ? void 0 : _a.style.includes("rounded-tl rounded-bl");
+    const isSecondChildRounded = (_b = childrenList[1]) == null ? void 0 : _b.style.includes("rounded-tr rounded-br");
+    const isArrowNumOne = arrowNum === 1;
+    return hasTwoChildren && isFirstChildRounded && isSecondChildRounded && isArrowNumOne;
+  };
+  var isCheckbox = (node) => {
+    return node.height == node.width && node.height == 18 || node.name == "\u591A\u9009\u6846";
+  };
+  var isRadioButton = (node, styleClass) => {
+    return node.height == node.width && node.height == 20 && styleClass.includes("rounded-full") || node.name == "\u5355\u9009\u6846";
+  };
+  var hasArrowDownElement = (childrenList) => {
+    return childrenList.some((e) => ["top bar-arrow-down", "PacvueIcon-PacvueIconTopBarArrowDown"].includes(e.name));
+  };
+  var isSwitch = (node) => {
+    return node.name == "\u5F00\u5173";
+  };
+  var isTextArea = (node) => {
+    return node.name == "\u6587\u672C\u57DF";
+  };
+  var isSearchBox = (node) => {
+    return node.name == "\u641C\u7D22\u6846";
+  };
+  var isInputWithHeight = (node, childrenList) => {
+    return childrenList.length == 1 && childrenList[0].name == "Input" && node.height >= 40;
+  };
+  var isTab = (node) => {
+    return node.name.includes("tab");
+  };
+  var isPrimaryOrSecondaryButton = (node, styleClass) => {
+    const isMainButton = node.name.includes("\u4E3B\u8981\u6309\u94AE");
+    const isSecondaryButton = node.name.includes("\u6B21\u7EA7\u6309\u94AE");
+    const isBorderHeight = node.height === 36 || node.height === 32;
+    const hasBorderClass = styleClass.includes("border");
+    const hasPrimaryBorderColor = styleClass.includes("border-[var(--el-color-primary)]");
+    const isNotRounded = !styleClass.includes("rounded-tr rounded-br") && !styleClass.includes("rounded-tl rounded-bl");
+    return isMainButton || isSecondaryButton || isBorderHeight && hasBorderClass && hasPrimaryBorderColor && isNotRounded;
+  };
+  var isGrayButton = (node) => {
+    return node.name.includes("\u7070\u8272\u6309\u94AE") || node.name.toLocaleLowerCase().includes("button");
+  };
+  var isSmallSizedElement = (node, childrenList) => {
+    return node.width == node.height && node.width < 26 && (node.type == "INSTANCE" || childrenList.some((e) => e.name == "Union"));
   };
   var uniqueArray = (array) => {
     let arr1 = [];
@@ -2601,6 +2665,50 @@
   };
 
   // src/worker/backend/style/builderImpl/htmlColor.ts
+  var pacvueColors2 = {
+    "#ffffff": "--el-color-white",
+    "#000000": "--el-color-black",
+    "#ff9f43": "--el-color-primary",
+    "#ffbc7b": "--el-color-primary-light-3",
+    "#ffcfa1": "--el-color-primary-light-5",
+    "#ffe2c7": "--el-color-primary-light-7",
+    "#ffecd9": "--el-color-primary-light-8",
+    "#fff5ec": "--el-color-primary-light-9",
+    "#cc7f36": "--el-color-primary-dark-2",
+    "#28c76f": "--el-color-success",
+    "#69d89a": "--el-color-success-light-3",
+    "#94e3b7": "--el-color-success-light-5",
+    "#bfeed4": "--el-color-success-light-7",
+    "#d4f4e2": "--el-color-success-light-8",
+    "#eaf9f1": "--el-color-success-light-9",
+    "#209f59": "--el-color-success-dark-2",
+    "#ea5455": "--el-color-danger",
+    "#f08788": "--el-color-danger-light-3",
+    "#f5aaaa": "--el-color-danger-light-5",
+    "#f9cccc": "--el-color-danger-light-7",
+    "#fbdddd": "--el-color-danger-light-8",
+    "#fdeeee": "--el-color-danger-light-9",
+    "#bb4344": "--el-color-danger-dark-2",
+    "#82858b": "--el-color-info",
+    "#a8aaae": "--el-color-info-light-3",
+    "#c1c2c5": "--el-color-info-light-5",
+    "#dadadc": "--el-color-info-light-7",
+    "#e6e7e8": "--el-color-info-light-8",
+    "#f3f3f3": "--el-color-info-light-9",
+    "#686a6f": "--el-color-info-dark-2",
+    "#f2f3f5": "--el-bg-color-page",
+    "#5e5873": "--el-text-color-primary",
+    "#45464f": "--color-title--",
+    "#66666c": "--color-text--",
+    "#b2b2b8": "--color-info--",
+    "#dedfe3": "--icon-disabled--",
+    "#fff1e3": "--hover-color--",
+    "#f4f5f6": "--el-input-disable-bg--",
+    "#b2b2b2": "--pac-disabled-text-color--",
+    "#d9d9d9": "--pac-upload-border-color",
+    "#1890ff": "--pac-href-color1",
+    "#0D6EFD": "--pac-href-color"
+  };
   var htmlColorFromFills = (fills) => {
     const fill = retrieveTopFill(fills);
     if (fill && fill.type === "SOLID") {
@@ -2618,17 +2726,21 @@
   };
   var htmlColor = (color, alpha = 1) => {
     if (color.r === 1 && color.g === 1 && color.b === 1 && alpha === 1) {
-      return "white";
+      return "var(--el-color-white)";
     }
     if (color.r === 0 && color.g === 0 && color.b === 0 && alpha === 1) {
-      return "black";
+      return "var(--el-color-black)";
     }
     if (alpha === 1) {
       const r2 = Math.round(color.r * 255);
       const g2 = Math.round(color.g * 255);
       const b2 = Math.round(color.b * 255);
       const toHex = (num) => num.toString(16).padStart(2, "0");
-      return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`.toUpperCase();
+      const hexColor = `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`.toLowerCase();
+      if (pacvueColors2[hexColor]) {
+        return `var(${pacvueColors2[hexColor]})`;
+      }
+      return hexColor.toUpperCase();
     }
     const r = sliceNum(color.r * 255);
     const g = sliceNum(color.g * 255);
@@ -2847,27 +2959,41 @@
     }
     let comp = [];
     if ("horizontal" in padding) {
-      if (padding.horizontal !== 0) {
-        comp.push(formatWithJSX("padding-left", isJsx, padding.horizontal));
-        comp.push(formatWithJSX("padding-right", isJsx, padding.horizontal));
-      }
-      if (padding.vertical !== 0) {
-        comp.push(formatWithJSX("padding-top", isJsx, padding.vertical));
-        comp.push(formatWithJSX("padding-bottom", isJsx, padding.vertical));
+      if (padding.horizontal !== 0 || padding.vertical !== 0) {
+        let y = padding.vertical !== 0 ? padding.vertical + "px" : 0;
+        let x = padding.horizontal !== 0 ? padding.horizontal + "px" : 0;
+        let paddingxy = `${y} ${x}`;
+        comp.push(formatWithJSX("padding", isJsx, paddingxy));
       }
       return comp;
     }
-    if (padding.top !== 0) {
-      comp.push(formatWithJSX("padding-top", isJsx, padding.top));
-    }
-    if (padding.bottom !== 0) {
-      comp.push(formatWithJSX("padding-bottom", isJsx, padding.bottom));
-    }
-    if (padding.left !== 0) {
-      comp.push(formatWithJSX("padding-left", isJsx, padding.left));
-    }
-    if (padding.right !== 0) {
-      comp.push(formatWithJSX("padding-right", isJsx, padding.right));
+    let index = 0;
+    const directions = ["top", "bottom", "left", "right"];
+    directions.forEach((direction) => {
+      if (padding[direction] !== 0) {
+        index++;
+      }
+    });
+    if (index <= 2) {
+      if (padding.top !== 0) {
+        comp.push(formatWithJSX("padding-top", isJsx, padding.top));
+      }
+      if (padding.bottom !== 0) {
+        comp.push(formatWithJSX("padding-bottom", isJsx, padding.bottom));
+      }
+      if (padding.left !== 0) {
+        comp.push(formatWithJSX("padding-left", isJsx, padding.left));
+      }
+      if (padding.right !== 0) {
+        comp.push(formatWithJSX("padding-right", isJsx, padding.right));
+      }
+    } else {
+      const top = padding.top !== 0 ? padding.top + "px" : 0;
+      const bottom = padding.top !== 0 ? padding.top + "px" : 0;
+      const left = padding.top !== 0 ? padding.top + "px" : 0;
+      const right = padding.top !== 0 ? padding.top + "px" : 0;
+      let p = `${top} ${right} ${bottom} ${left}`;
+      comp.push(formatWithJSX("padding", isJsx, p));
     }
     return comp;
   };

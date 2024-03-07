@@ -66,11 +66,11 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueRadio';
 	}
-	if(childrenList.length > 1 && childrenList.filter(e=>e.name == 'PacvueRadio').length == childrenList.length){
+	if(isAllPacvueRadio(childrenList)){
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueRadioGroup';
 		ParentObj.children = childrenList
-	} else if (node.height < 40 && node.height > 30 && (styleClass.includes('rounded-md') || styleClass.includes('rounded')) && styleClass.includes("border") && styleClass.includes('border-[var(--icon-disabled--)]')){
+	} else if (isCustomButton(node, styleClass)){
 		/* 通过样式判断是否是选框 */
 		if(node.height != node.width){
 			const newClass = styleClass.filter(e=>e != 'rounded-md' && e != 'rounded' && e != 'border' && e != 'border-[var(--icon-disabled--)]' && e != 'h-9' && e != 'h-8' && !e.includes('px') && !e.includes('py'))
@@ -117,7 +117,7 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 			}
 			ParentObj.name = `PacvueButton-${icon}`;
 		}
-	} else if (childrenList.length == 2 && childrenList[0].style.includes('rounded-tl rounded-bl') && childrenList[1].style.includes('rounded-tr rounded-br') && arrowNum == 1){
+	} else if (isArrowBlock(childrenList, arrowNum)){
 		ParentObj.type = 'PACVUE';
 		var textLength = searchByType(visibleChildNode, 0, 'TEXT')
 		var textArr: string[] = []
@@ -131,40 +131,40 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 			}
 		});
 		ParentObj.name = name;
-	} else if ((node.height == node.width && node.height == 18) || node.name == '多选框'){
+	} else if (isCheckbox(node)){
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'Checkbox';
-	} else if ((node.height == node.width && node.height == 20 && styleClass.includes("rounded-full")) || node.name == '单选框'){
+	} else if (isRadioButton(node, styleClass)){
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'Radio';
-	} else if (childrenList.some(e=>['top bar-arrow-down','PacvueIcon-PacvueIconTopBarArrowDown'].includes(e.name))){
+	} else if (hasArrowDownElement(childrenList)){
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueDropdown';
 		ParentObj.children = childrenList
-	} else if (node.name == '开关'){
+	} else if (isSwitch(node)){
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueSwitch';
-	} else if (node.name == '文本域'){
+	} else if (isTextArea(node)){
 		if (childrenList.some(e=>['文本域','PacvueInput-Textarea'].includes(e.name))){
 			ParentObj.type = 'PACVUE';
 			ParentObj.name = 'PacvueInput-Textarea';
 		} else {
 			ParentObj.children = childrenList;
 		}
-	} else if (node.name == '搜索框'){
+	} else if (isSearchBox(node)){
 		let slot = '-prefix'
 		if(childrenList.length == 1 && childrenList[0].name == 'Search在后'){
 			slot = '-append'
 		}
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueInput-Search' + slot;
-	} else if (childrenList.length == 1 && childrenList[0].name == 'Input' && node.height >= 40){
+	} else if (isInputWithHeight(node, childrenList)){
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueInput-Textarea';
-	} else if (node.name.includes('tab')) {
+	} else if (isTab(node)) {
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueTab';
-	} else if ((node.name.includes('主要按钮') || node.name.includes('次级按钮')) || ((node.height == 36 || node.height == 32) && styleClass.includes("border") &&styleClass.includes("border-[var(--el-color-primary)]"))) {
+	} else if (isPrimaryOrSecondaryButton(node, styleClass)) {
 		ParentObj.type = 'PACVUE';
 		let icon = '-';
 		const iconList = visibleChildNode.filter(e => {
@@ -179,7 +179,7 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 			type = 'primary'
 		}
 		ParentObj.name = `PacvueButton-${type}${icon}`;
-	} else if (node.name.includes('灰色按钮') || node.name.toLocaleLowerCase().includes('button')) {
+	} else if (isGrayButton(node)) {
 		ParentObj.type = 'PACVUE';
 		let name = 'PacvueButton'
 		let type = 'primary'
@@ -190,7 +190,7 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 			type = 'plain'
 		}
 		ParentObj.name = `${name}-${type}`;
-	} else if (node.width == node.height && node.width < 26 && (node.type == 'INSTANCE' || childrenList.some(e=>e.name == 'Union'))){
+	} else if (isSmallSizedElement(node, childrenList)){
 		ParentObj.type = 'PACVUE';
 		const a: string = node.name;
 		let icon = (svgIcon as { [key: string]: string })[a.trim()];
@@ -198,12 +198,73 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 	}
 
 	const pacvueChildren = childrenList.filter(e=>e.type == 'PACVUE')
-	if(ParentObj.type != 'PACVUE' && childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some(e=>{ return e.includes('bg-') || e.includes('border-') || e.includes('grow') }))){
+	const conditions = ['bg-', 'border-', 'grow', 'px-', 'py-', 'pt-', 'pr-', 'pb-', 'pl-', 'p-'];
+	if(ParentObj.type != 'PACVUE' && childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some(e=>{ return conditions.some(cond => e.includes(cond)) }))){
 		return childrenList[0]
 	}else{
 		ParentObj.children = childrenList
 	}
 	return ParentObj
+}
+
+const isAllPacvueRadio = (childrenList: any[]): boolean => {
+  return childrenList.length > 1 && childrenList.filter(e => e.name == 'PacvueRadio').length == childrenList.length;
+}
+const isCustomButton = (node: SceneNode, styleClass: any[]): boolean => {
+  const isHeightInRange = node.height < 40 && node.height > 30;
+  const hasRoundedClass = styleClass.includes('rounded-md') || styleClass.includes('rounded');
+  const hasBorderClass = styleClass.includes('border');
+  const hasIconDisabledBorder = styleClass.includes('border-[var(--icon-disabled--)]');
+
+  return isHeightInRange && hasRoundedClass && hasBorderClass && hasIconDisabledBorder;
+};
+const isArrowBlock = (childrenList: any[], arrowNum: number): boolean => {
+  const hasTwoChildren = childrenList.length === 2;
+  const isFirstChildRounded = childrenList[0]?.style.includes('rounded-tl rounded-bl');
+  const isSecondChildRounded = childrenList[1]?.style.includes('rounded-tr rounded-br');
+  const isArrowNumOne = arrowNum === 1;
+
+  return hasTwoChildren && isFirstChildRounded && isSecondChildRounded && isArrowNumOne;
+};
+
+const isCheckbox = (node: SceneNode): boolean => {
+	return (node.height == node.width && node.height == 18) || node.name == '多选框'
+}
+const isRadioButton = (node: SceneNode, styleClass: any[]): boolean => {
+	return (node.height == node.width && node.height == 20 && styleClass.includes("rounded-full")) || node.name == '单选框'
+}
+const hasArrowDownElement = (childrenList: any[]): boolean => {
+	return childrenList.some(e=>['top bar-arrow-down','PacvueIcon-PacvueIconTopBarArrowDown'].includes(e.name))
+}
+const isSwitch = (node: SceneNode): boolean => {
+	return node.name == '开关'
+}
+const isTextArea = (node: SceneNode): boolean => {
+	return node.name == '文本域'
+}
+const isSearchBox = (node: SceneNode): boolean => {
+	return node.name == '搜索框'
+}
+const isInputWithHeight = (node: SceneNode, childrenList: any[]): boolean => {
+	return childrenList.length == 1 && childrenList[0].name == 'Input' && node.height >= 40
+}
+const isTab = (node: SceneNode): boolean => {
+	return node.name.includes('tab')
+}
+const isPrimaryOrSecondaryButton = (node: SceneNode, styleClass: any[]): boolean => {
+	const isMainButton = node.name.includes('主要按钮');
+	const isSecondaryButton = node.name.includes('次级按钮');
+	const isBorderHeight = node.height === 36 || node.height === 32;
+	const hasBorderClass = styleClass.includes("border");
+	const hasPrimaryBorderColor = styleClass.includes("border-[var(--el-color-primary)]");
+	const isNotRounded = !styleClass.includes("rounded-tr rounded-br") && !styleClass.includes("rounded-tl rounded-bl");
+	return (isMainButton || isSecondaryButton) || (isBorderHeight && hasBorderClass && hasPrimaryBorderColor && isNotRounded)
+}
+const isGrayButton = (node: SceneNode): boolean => {
+	return node.name.includes('灰色按钮') || node.name.toLocaleLowerCase().includes('button')
+}
+const isSmallSizedElement = (node: SceneNode, childrenList: any[]): boolean => {
+	return node.width == node.height && node.width < 26 && (node.type == 'INSTANCE' || childrenList.some(e=>e.name == 'Union'))
 }
 const uniqueArray = (array: string[]): string[] => {
 	let arr1: string[] = [];
