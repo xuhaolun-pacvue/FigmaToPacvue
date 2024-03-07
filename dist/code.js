@@ -1939,50 +1939,37 @@
       ParentObj.name = "PacvueRadioGroup";
       ParentObj.children = childrenList;
     } else if (isCustomButton(node, styleClass)) {
-      if (node.height != node.width) {
-        const newClass = styleClass.filter((e) => e != "rounded-md" && e != "rounded" && e != "border" && e != "border-[var(--icon-disabled--)]" && e != "h-9" && e != "h-8" && !e.includes("px") && !e.includes("py"));
+      ParentObj.type = "PACVUE";
+      if (node.height !== node.width) {
+        const excludedClasses = ["rounded-md", "rounded", "border", "border-[var(--icon-disabled--)]", "h-9", "h-8"];
+        const newClass = styleClass.filter((e) => !excludedClasses.includes(e) && !e.includes("px") && !e.includes("py"));
         const dateNum = searchByName(visibleChildNode, 0, "Rectangle 1138");
-        var textLength = searchByType(visibleChildNode, 0, "TEXT");
-        var textArr = [];
-        if (textLength > 0) {
-          textArr = getChildrenAllText(visibleChildNode, textArr);
-        }
+        const textLength2 = searchByType(visibleChildNode, 0, "TEXT");
+        const textArr2 = textLength2 > 0 ? getChildrenAllText(visibleChildNode, []) : [];
         let name;
         if (dateNum > 0) {
           name = "PacvueDatePicker";
-          textArr.forEach((e) => {
-            if (e == "~" || e.includes("~")) {
-              name += "-daterange";
-            }
-          });
-        } else if (arrowNum == 0) {
+          if (textArr2.some((e) => e === "~" || e.includes("~"))) {
+            name += "-daterange";
+          }
+        } else if (arrowNum === 0) {
           name = "PacvueInput";
-          textArr.forEach((e) => {
-            if (e.length == 1) {
-              name += "-" + e;
+          textArr2.forEach((e) => {
+            if (e.length === 1) {
+              name += `-${e}`;
             }
           });
         } else {
           name = "PacvueSelect";
           const num = searchByName(visibleChildNode, 0, "Rectangle 539");
-          if (num == 1) {
-            name += "-" + textArr[0];
+          if (num === 1) {
+            name += `-${textArr2[0]}`;
           }
         }
-        ParentObj.type = "PACVUE";
         ParentObj.name = name;
         ParentObj.style = newClass;
       } else {
-        ParentObj.type = "PACVUE";
-        let icon = "-";
-        const iconList = visibleChildNode.filter((e) => {
-          return e.width == e.height && e.type != "TEXT";
-        });
-        if (iconList.length == 1) {
-          const a = iconList[0].name;
-          icon += svgIcon[a.trim()];
-        }
-        ParentObj.name = `PacvueButton-${icon}`;
+        ParentObj.name = `PacvueButton-${getIconName(visibleChildNode)}`;
       }
     } else if (isArrowBlock(childrenList, arrowNum)) {
       ParentObj.type = "PACVUE";
@@ -2019,44 +2006,29 @@
         ParentObj.children = childrenList;
       }
     } else if (isSearchBox(node)) {
-      let slot = "-prefix";
-      if (childrenList.length == 1 && childrenList[0].name == "Search\u5728\u540E") {
-        slot = "-append";
-      }
+      let slot = childrenList.length == 1 && childrenList[0].name == "Search\u5728\u540E" ? "-append" : "-prefix";
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueInput-Search" + slot;
     } else if (isInputWithHeight(node, childrenList)) {
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueInput-Textarea";
-    } else if (isTab(node)) {
+    } else if (isTab(node, childrenList)) {
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueTab";
     } else if (isPrimaryOrSecondaryButton(node, styleClass)) {
       ParentObj.type = "PACVUE";
-      let icon = "-";
-      const iconList = visibleChildNode.filter((e) => {
-        return e.width == e.height && e.type != "TEXT";
-      });
-      if (iconList.length == 1) {
-        const a = iconList[0].name;
-        icon += svgIcon[a.trim()];
+      let icon = "";
+      const iconList = visibleChildNode.filter((e) => e.width === e.height && e.type !== "TEXT");
+      if (iconList.length === 1) {
+        const iconName = iconList[0].name.trim();
+        icon += "-" + svgIcon[iconName];
       }
-      var type = "primaryplain";
-      if (styleClass.includes("bg-[var(--el-color-primary)]") || node.name.includes("\u4E3B\u8981\u6309\u94AE")) {
-        type = "primary";
-      }
+      const type = styleClass.includes("bg-[var(--el-color-primary)]") || node.name.includes("\u4E3B\u8981\u6309\u94AE") ? "primary" : "primaryplain";
       ParentObj.name = `PacvueButton-${type}${icon}`;
     } else if (isGrayButton(node)) {
       ParentObj.type = "PACVUE";
-      let name = "PacvueButton";
-      let type2 = "primary";
-      if (node.name.includes("\u7070\u8272\u6309\u94AE")) {
-        type2 = "";
-      }
-      if (node.name.includes("\u6B21\u7EA7\u6309\u94AE")) {
-        type2 = "plain";
-      }
-      ParentObj.name = `${name}-${type2}`;
+      let type = node.name.includes("\u7070\u8272\u6309\u94AE") ? "" : node.name.includes("\u6B21\u7EA7\u6309\u94AE") ? "plain" : "primary";
+      ParentObj.name = `PacvueButton-${type}`;
     } else if (isSmallSizedElement(node, childrenList)) {
       ParentObj.type = "PACVUE";
       const a = node.name;
@@ -2113,8 +2085,8 @@
   var isInputWithHeight = (node, childrenList) => {
     return childrenList.length == 1 && childrenList[0].name == "Input" && node.height >= 40;
   };
-  var isTab = (node) => {
-    return node.name.includes("tab");
+  var isTab = (node, childrenList) => {
+    return node.name.includes("tab") || childrenList.length > 1 && childrenList[0].style.includes("rounded-tl rounded-bl") && childrenList[1].style.includes("rounded-tr rounded-br");
   };
   var isPrimaryOrSecondaryButton = (node, styleClass) => {
     const isMainButton = node.name.includes("\u4E3B\u8981\u6309\u94AE");
@@ -2130,6 +2102,15 @@
   };
   var isSmallSizedElement = (node, childrenList) => {
     return node.width == node.height && node.width < 26 && (node.type == "INSTANCE" || childrenList.some((e) => e.name == "Union"));
+  };
+  var getIconName = (visibleChildNode) => {
+    let icon = "-";
+    const iconList = visibleChildNode.filter((e) => e.width === e.height && e.type !== "TEXT");
+    if (iconList.length === 1) {
+      const iconName = iconList[0].name.trim();
+      icon += svgIcon[iconName];
+    }
+    return icon;
   };
   var uniqueArray = (array) => {
     let arr1 = [];
@@ -2283,7 +2264,7 @@
     if (visibleChildNode.length >= 2) {
       const visibleChildNodelast = visibleChildNode[visibleChildNode.length - 1];
       if (isIcon(visibleChildNodelast)) {
-        if (getIconName(visibleChildNodelast) == "Rectangle 1138") {
+        if (getIconName2(visibleChildNodelast) == "Rectangle 1138") {
           return '\n<PacvueDatePicker type="daterange" />';
         }
       }
@@ -2494,7 +2475,7 @@
     }
     return false;
   };
-  var getIconName = (node) => {
+  var getIconName2 = (node) => {
     let iconName = "";
     const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
     const visibleChildNode = childrNode.filter((e) => e.visible);

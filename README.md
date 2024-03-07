@@ -7,6 +7,8 @@
 - 新增支持带选择器的特殊输入框组件
 - 优化Tab组件判断
 - 优化Button内容显示
+- 优化style模式下padding的返回
+- style模式下color新增支持返回主题色
 
 2024.03.06
 - 新增支持DropDown组件

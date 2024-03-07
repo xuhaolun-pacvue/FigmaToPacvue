@@ -72,50 +72,38 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 		ParentObj.children = childrenList
 	} else if (isCustomButton(node, styleClass)){
 		/* 通过样式判断是否是选框 */
-		if(node.height != node.width){
-			const newClass = styleClass.filter(e=>e != 'rounded-md' && e != 'rounded' && e != 'border' && e != 'border-[var(--icon-disabled--)]' && e != 'h-9' && e != 'h-8' && !e.includes('px') && !e.includes('py'))
+		ParentObj.type = 'PACVUE';
+		if (node.height !== node.width) {
+			const excludedClasses = ['rounded-md', 'rounded', 'border', 'border-[var(--icon-disabled--)]', 'h-9', 'h-8'];
+			const newClass = styleClass.filter(e => !excludedClasses.includes(e) && !e.includes('px') && !e.includes('py'));
 			const dateNum = searchByName(visibleChildNode, 0, 'Rectangle 1138')
-			var textLength = searchByType(visibleChildNode, 0, 'TEXT')
-			var textArr: string[] = []
-			if(textLength > 0){
-				textArr = getChildrenAllText(visibleChildNode, textArr)
-			}
+			const textLength = searchByType(visibleChildNode, 0, 'TEXT')
+			const textArr: string[] = textLength > 0 ? getChildrenAllText(visibleChildNode, []) : []
 			let name: string;
 			if (dateNum > 0) {
 				name = 'PacvueDatePicker';
-				textArr.forEach((e) => {
-					if(e == '~' || e.includes('~')){
-						name += '-daterange'
-					}
-				})
-			} else if (arrowNum == 0) {
+				if (textArr.some(e => e === '~' || e.includes('~'))) {
+					name += '-daterange';
+				}
+			} else if (arrowNum === 0) {
 				name = 'PacvueInput';
-				textArr.forEach((e) => {
-					if (e.length == 1) {
-						name += '-' + e;
+				textArr.forEach(e => {
+					if (e.length === 1) {
+						name += `-${e}`;
 					}
 				});
 			} else {
 				name = 'PacvueSelect';
-				const num =  searchByName(visibleChildNode, 0, 'Rectangle 539')
-				if(num == 1){
-					name += '-' + textArr[0]
-				} 
+				const num = searchByName(visibleChildNode, 0, 'Rectangle 539');
+				if (num === 1) {
+					name += `-${textArr[0]}`;
+				}
 			}
-			ParentObj.type = 'PACVUE';
+
 			ParentObj.name = name;
 			ParentObj.style = newClass;
-		}else{
-			ParentObj.type = 'PACVUE';
-			let icon = '-';
-			const iconList = visibleChildNode.filter(e => {
-				return e.width == e.height && e.type != 'TEXT';
-			});
-			if (iconList.length == 1) {
-				const a: string = iconList[0].name;
-				icon += (svgIcon as { [key: string]: string })[a.trim()];
-			}
-			ParentObj.name = `PacvueButton-${icon}`;
+		} else {
+			ParentObj.name = `PacvueButton-${getIconName(visibleChildNode)}`;
 		}
 	} else if (isArrowBlock(childrenList, arrowNum)){
 		ParentObj.type = 'PACVUE';
@@ -152,44 +140,29 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 			ParentObj.children = childrenList;
 		}
 	} else if (isSearchBox(node)){
-		let slot = '-prefix'
-		if(childrenList.length == 1 && childrenList[0].name == 'Search在后'){
-			slot = '-append'
-		}
+		let slot = childrenList.length == 1 && childrenList[0].name == 'Search在后' ? '-append' : '-prefix'
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueInput-Search' + slot;
 	} else if (isInputWithHeight(node, childrenList)){
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueInput-Textarea';
-	} else if (isTab(node)) {
+	} else if (isTab(node, childrenList)) {
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueTab';
 	} else if (isPrimaryOrSecondaryButton(node, styleClass)) {
 		ParentObj.type = 'PACVUE';
-		let icon = '-';
-		const iconList = visibleChildNode.filter(e => {
-			return e.width == e.height && e.type != 'TEXT';
-		});
-		if (iconList.length == 1) {
-			const a: string = iconList[0].name;
-			icon += (svgIcon as { [key: string]: string })[a.trim()];
+		let icon = '';
+		const iconList = visibleChildNode.filter(e => e.width === e.height && e.type !== 'TEXT');
+		if (iconList.length === 1) {
+			const iconName = iconList[0].name.trim();
+			icon += '-' + (svgIcon as { [key: string]: string })[iconName];
 		}
-		var type = 'primaryplain'
-		if(styleClass.includes("bg-[var(--el-color-primary)]") || node.name.includes('主要按钮')){
-			type = 'primary'
-		}
+		const type = styleClass.includes("bg-[var(--el-color-primary)]") || node.name.includes('主要按钮') ? 'primary' : 'primaryplain';
 		ParentObj.name = `PacvueButton-${type}${icon}`;
 	} else if (isGrayButton(node)) {
 		ParentObj.type = 'PACVUE';
-		let name = 'PacvueButton'
-		let type = 'primary'
-		if(node.name.includes('灰色按钮')){
-			type = ''
-		}
-		if(node.name.includes('次级按钮')){
-			type = 'plain'
-		}
-		ParentObj.name = `${name}-${type}`;
+		let type = node.name.includes('灰色按钮') ? '' : node.name.includes('次级按钮') ? 'plain' : 'primary';
+		ParentObj.name = `PacvueButton-${type}`;
 	} else if (isSmallSizedElement(node, childrenList)){
 		ParentObj.type = 'PACVUE';
 		const a: string = node.name;
@@ -208,23 +181,23 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 }
 
 const isAllPacvueRadio = (childrenList: any[]): boolean => {
-  return childrenList.length > 1 && childrenList.filter(e => e.name == 'PacvueRadio').length == childrenList.length;
+	return childrenList.length > 1 && childrenList.filter(e => e.name == 'PacvueRadio').length == childrenList.length;
 }
 const isCustomButton = (node: SceneNode, styleClass: any[]): boolean => {
-  const isHeightInRange = node.height < 40 && node.height > 30;
-  const hasRoundedClass = styleClass.includes('rounded-md') || styleClass.includes('rounded');
-  const hasBorderClass = styleClass.includes('border');
-  const hasIconDisabledBorder = styleClass.includes('border-[var(--icon-disabled--)]');
+	const isHeightInRange = node.height < 40 && node.height > 30;
+	const hasRoundedClass = styleClass.includes('rounded-md') || styleClass.includes('rounded');
+	const hasBorderClass = styleClass.includes('border');
+	const hasIconDisabledBorder = styleClass.includes('border-[var(--icon-disabled--)]');
 
-  return isHeightInRange && hasRoundedClass && hasBorderClass && hasIconDisabledBorder;
+	return isHeightInRange && hasRoundedClass && hasBorderClass && hasIconDisabledBorder;
 };
 const isArrowBlock = (childrenList: any[], arrowNum: number): boolean => {
-  const hasTwoChildren = childrenList.length === 2;
-  const isFirstChildRounded = childrenList[0]?.style.includes('rounded-tl rounded-bl');
-  const isSecondChildRounded = childrenList[1]?.style.includes('rounded-tr rounded-br');
-  const isArrowNumOne = arrowNum === 1;
+	const hasTwoChildren = childrenList.length === 2;
+	const isFirstChildRounded = childrenList[0]?.style.includes('rounded-tl rounded-bl');
+	const isSecondChildRounded = childrenList[1]?.style.includes('rounded-tr rounded-br');
+	const isArrowNumOne = arrowNum === 1;
 
-  return hasTwoChildren && isFirstChildRounded && isSecondChildRounded && isArrowNumOne;
+	return hasTwoChildren && isFirstChildRounded && isSecondChildRounded && isArrowNumOne;
 };
 
 const isCheckbox = (node: SceneNode): boolean => {
@@ -248,8 +221,8 @@ const isSearchBox = (node: SceneNode): boolean => {
 const isInputWithHeight = (node: SceneNode, childrenList: any[]): boolean => {
 	return childrenList.length == 1 && childrenList[0].name == 'Input' && node.height >= 40
 }
-const isTab = (node: SceneNode): boolean => {
-	return node.name.includes('tab')
+const isTab = (node: SceneNode, childrenList: any[]): boolean => {
+	return node.name.includes('tab') || (childrenList.length > 1 && childrenList[0].style.includes('rounded-tl rounded-bl') && childrenList[1].style.includes('rounded-tr rounded-br'))
 }
 const isPrimaryOrSecondaryButton = (node: SceneNode, styleClass: any[]): boolean => {
 	const isMainButton = node.name.includes('主要按钮');
@@ -265,6 +238,15 @@ const isGrayButton = (node: SceneNode): boolean => {
 }
 const isSmallSizedElement = (node: SceneNode, childrenList: any[]): boolean => {
 	return node.width == node.height && node.width < 26 && (node.type == 'INSTANCE' || childrenList.some(e=>e.name == 'Union'))
+}
+const getIconName = (visibleChildNode: any[]) => {
+	let icon = '-';
+	const iconList = visibleChildNode.filter(e => e.width === e.height && e.type !== 'TEXT');
+	if (iconList.length === 1) {
+		const iconName = iconList[0].name.trim();
+		icon += (svgIcon as { [key: string]: string })[iconName];
+	}
+	return icon;
 }
 const uniqueArray = (array: string[]): string[] => {
 	let arr1: string[] = [];
