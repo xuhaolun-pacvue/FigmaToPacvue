@@ -1,6 +1,6 @@
 import { convertIntoNodes } from "./altNodes/altConversion";
 import { tailwindMain } from "./tailwind/tailwindMain";
-import { tailwindMain1 } from "./tailwind/tailwindMain1";
+import { pacvueMain } from "./tailwind/pacvueMain";
 import { styleMain } from "./style/styleMain";
 
 export type FrameworkTypes = "Tailwind";
@@ -33,7 +33,7 @@ export const run = (settings: PluginSettings) => {
   let result = ''
   switch (settings.mode) {
     case "tailwind":
-      let array = tailwindMain1(convertedSelection, settings)
+      let array = pacvueMain(convertedSelection, settings)
       result = tailwindMain(array, settings)
       break
     case "style":
@@ -52,7 +52,7 @@ export const run = (settings: PluginSettings) => {
 };
 export const codegenRun = (selection :any, settings: PluginSettings): string => { 
   const convertedSelection = convertIntoNodes(selection,null);
-  // let array = tailwindMain1(convertedSelection, settings)
+  // let array = pacvueMain(convertedSelection, settings)
   // let result = tailwindMain(array, settings)
   let result = styleMain(convertedSelection)
   return result

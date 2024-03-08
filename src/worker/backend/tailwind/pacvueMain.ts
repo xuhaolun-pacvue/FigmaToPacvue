@@ -15,7 +15,7 @@ type NodeObj = {
 	children: any[];
 };
 export let localTailwindSettings: PluginSettings;
-export const tailwindMain1 = (sceneNode: Array<SceneNode>, settings: PluginSettings) => {
+export const pacvueMain = (sceneNode: Array<SceneNode>, settings: PluginSettings) => {
 	localTailwindSettings = settings;
 	let result = tailwindWidgetGenerator(sceneNode);
 	return result;
@@ -172,9 +172,14 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 
 	const pacvueChildren = childrenList.filter(e=>e.type == 'PACVUE')
 	const conditions = ['bg-', 'border-', 'grow', 'px-', 'py-', 'pt-', 'pr-', 'pb-', 'pl-', 'p-'];
-	if(ParentObj.type != 'PACVUE' && childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some(e=>{ return conditions.some(cond => e.includes(cond)) }))){
+	// 检查 ParentObj 的 type 是否不为 'PACVUE'，同时 childrenList 数组长度为1，且满足以下条件之一：
+	// 1. pacvueChildren 数组长度为1
+	// 2. styleClass 数组中没有任何元素的 name 包含 conditions 中的任何一个条件字符串
+	if (ParentObj.type != 'PACVUE' && childrenList.length == 1 && (pacvueChildren.length == 1 || !styleClass.some(e => { return conditions.some(cond => e.includes(cond)) }))) {
+		// 如果满足上述条件，返回 childrenList 数组中的第一个元素
 		return childrenList[0]
 	}else{
+		// 如果条件不满足，将 childrenList 数组赋值给 ParentObj 的 children 属性
 		ParentObj.children = childrenList
 	}
 	return ParentObj
@@ -184,29 +189,39 @@ const isAllPacvueRadio = (childrenList: any[]): boolean => {
 	return childrenList.length > 1 && childrenList.filter(e => e.name == 'PacvueRadio').length == childrenList.length;
 }
 const isCustomButton = (node: SceneNode, styleClass: any[]): boolean => {
+	// 检查节点高度是否在30到40之间
 	const isHeightInRange = node.height < 40 && node.height > 30;
+	// 检查样式类是否包含 'rounded-md' 或 'rounded'
 	const hasRoundedClass = styleClass.includes('rounded-md') || styleClass.includes('rounded');
+	// 检查样式类是否包含 'border'
 	const hasBorderClass = styleClass.includes('border');
+	// 检查样式类是否包含特定边框颜色 'border-[var(--icon-disabled--)]'
 	const hasIconDisabledBorder = styleClass.includes('border-[var(--icon-disabled--)]');
 
 	return isHeightInRange && hasRoundedClass && hasBorderClass && hasIconDisabledBorder;
 };
 const isArrowBlock = (childrenList: any[], arrowNum: number): boolean => {
+	// 检查子元素列表是否有两个子元素
 	const hasTwoChildren = childrenList.length === 2;
+	// 检查第一个子元素是否具有圆角边框样式 'rounded-tl' 和 'rounded-bl'
 	const isFirstChildRounded = childrenList[0]?.style.includes('rounded-tl rounded-bl');
+	// 检查第二个子元素是否具有圆角边框样式 'rounded-tr' 和 'rounded-br'
 	const isSecondChildRounded = childrenList[1]?.style.includes('rounded-tr rounded-br');
+	// 检查子元素中是否含有箭头
 	const isArrowNumOne = arrowNum === 1;
-
 	return hasTwoChildren && isFirstChildRounded && isSecondChildRounded && isArrowNumOne;
 };
 
 const isCheckbox = (node: SceneNode): boolean => {
-	return (node.height == node.width && node.height == 18) || node.name == '多选框'
+	// 检查节点的高度和宽度是否相等且为18，或者节点的名称是否为 '多选框'
+	return (node.height == node.width && node.height == 18) || node.name == '多选框';
 }
 const isRadioButton = (node: SceneNode, styleClass: any[]): boolean => {
+	// 检查节点的高度和宽度是否相等且为20，同时样式类包含 'rounded-full'，或者节点的名称为 '单选框'
 	return (node.height == node.width && node.height == 20 && styleClass.includes("rounded-full")) || node.name == '单选框'
 }
 const hasArrowDownElement = (childrenList: any[]): boolean => {
+	// 检查 childrenList 数组中是否存在至少一个元素，其 name 属性的值为 'top bar-arrow-down' 或 'PacvueIcon-PacvueIconTopBarArrowDown'
 	return childrenList.some(e=>['top bar-arrow-down','PacvueIcon-PacvueIconTopBarArrowDown'].includes(e.name))
 }
 const isSwitch = (node: SceneNode): boolean => {
@@ -222,16 +237,27 @@ const isInputWithHeight = (node: SceneNode, childrenList: any[]): boolean => {
 	return childrenList.length == 1 && childrenList[0].name == 'Input' && node.height >= 40
 }
 const isTab = (node: SceneNode, childrenList: any[]): boolean => {
+	// 检查以下条件之一：
+	// 1. 节点的名称包含 'tab'
+	// 2. 子元素列表的长度大于1，同时第一个子元素的样式包含 'rounded-tl rounded-bl'，第二个子元素的样式包含 'rounded-tr rounded-br'
 	return node.name.includes('tab') || (childrenList.length > 1 && childrenList[0].style.includes('rounded-tl rounded-bl') && childrenList[1].style.includes('rounded-tr rounded-br'))
 }
 const isPrimaryOrSecondaryButton = (node: SceneNode, styleClass: any[]): boolean => {
+	// 检查节点的名称是否包含 '主要按钮'
 	const isMainButton = node.name.includes('主要按钮');
+	// 检查节点的名称是否包含 '次级按钮'
 	const isSecondaryButton = node.name.includes('次级按钮');
+	// 检查节点的高度是否为36或32
 	const isBorderHeight = node.height === 36 || node.height === 32;
+	// 检查样式类是否包含 'border'
 	const hasBorderClass = styleClass.includes("border");
+	// 检查样式类是否包含特定主色边框颜色 'border-[var(--el-color-primary)]'
 	const hasPrimaryBorderColor = styleClass.includes("border-[var(--el-color-primary)]");
+	// 检查样式类是否不包含任何圆角边框样式 'rounded-tr rounded-br' 和 'rounded-tl rounded-bl'
 	const isNotRounded = !styleClass.includes("rounded-tr rounded-br") && !styleClass.includes("rounded-tl rounded-bl");
-	return (isMainButton || isSecondaryButton) || (isBorderHeight && hasBorderClass && hasPrimaryBorderColor && isNotRounded)
+	// 返回一个布尔值，表示节点是否为主要按钮或次级按钮，或者满足以下条件之一：
+	// 1. 节点高度为36或32，同时样式类包含 'border'，包含特定主色边框颜色，且不包含任何圆角边框样式
+	return (isMainButton || isSecondaryButton) || (isBorderHeight && hasBorderClass && hasPrimaryBorderColor && isNotRounded);
 }
 const isGrayButton = (node: SceneNode): boolean => {
 	return node.name.includes('灰色按钮') || node.name.toLocaleLowerCase().includes('button')

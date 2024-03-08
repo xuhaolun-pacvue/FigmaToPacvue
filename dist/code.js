@@ -1882,9 +1882,9 @@
     "IconCursorMouse/size4": ""
   };
 
-  // src/worker/backend/tailwind/tailwindMain1.ts
+  // src/worker/backend/tailwind/pacvueMain.ts
   var localTailwindSettings;
-  var tailwindMain1 = (sceneNode, settings) => {
+  var pacvueMain = (sceneNode, settings) => {
     localTailwindSettings = settings;
     let result = tailwindWidgetGenerator(sceneNode);
     return result;
@@ -2239,39 +2239,6 @@
     return comp;
   };
   var tailwindFrame = (node, obj, isJsx) => {
-    const width = node.width ? `width='${node.width}px'` : "";
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
-    if (node.name == "\u5355\u9009\u6846+\u6587\u5B57") {
-      return tailwindWidgetGenerator2(obj.children, isJsx);
-    }
-    const visibleChildNode = childrNode.filter((e) => e.visible);
-    const visibleChildNode0 = visibleChildNode[0];
-    if (visibleChildNode.length == 1 && visibleChildNode[0].name == "Input") {
-      return pacvueInput(visibleChildNode0);
-    }
-    if (visibleChildNode.length == 2) {
-      if (visibleChildNode[1].name == "top bar-arrow-down") {
-        const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode0, localTailwindSettings2.optimizeLayout);
-        const visibleGrandChildNode = grandChildrNode.filter((e) => e.visible);
-        if (visibleGrandChildNode.length > 1 && visibleGrandChildNode[0].name == "Vendor" && visibleGrandChildNode[1].name == "Rectangle 539") {
-          const grandChildrNodeText = grandChildrNode[0];
-          let text = grandChildrNodeText.characters;
-          return `
-<pacvue-select ${width} :labelInner="'${text}'" />`;
-        }
-      }
-    }
-    if (visibleChildNode.length >= 2) {
-      const visibleChildNodelast = visibleChildNode[visibleChildNode.length - 1];
-      if (isIcon(visibleChildNodelast)) {
-        if (getIconName2(visibleChildNodelast) == "Rectangle 1138") {
-          return '\n<PacvueDatePicker type="daterange" />';
-        }
-      }
-    }
-    if (isIcon(node)) {
-      return pacvueIcon(node);
-    }
     const childrenStr = tailwindWidgetGenerator2(obj.children, isJsx);
     var rowColumn = "";
     if (obj.children.length > 1) {
@@ -2364,9 +2331,14 @@
         build = ' class="' + b.join(" ");
       }
       if (children) {
-        return `
+        const n = node;
+        if ((!build || build == ' class="w-full"') && !src && n.children.length === 1) {
+          return children;
+        } else {
+          return `
 <${tag}${build}${src}>${indentString(children)}
 </${tag}>`;
+        }
       } else if (selfClosingTags.includes(tag) || isJsx) {
         return `
 <${tag}${build}${src} />`;
@@ -2395,152 +2367,74 @@
 <div${builder.build()}></div>`;
     }
   };
-  var pacvueInput = (node) => {
-    let width = node.width ? `width='${node.width}px'` : "";
-    let textarea = "";
-    if (node.name == "\u6587\u672C\u57DF") {
-      let rows = node.height ? ` :rows="${((node.height - 10) / 21).toFixed(0)}"` : "";
-      textarea = 'type="textarea"' + rows;
-    }
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible);
-    let endTag = "/>";
-    if (visibleChildNode.length == 2) {
-      let symbol = "";
-      visibleChildNode.forEach((n) => {
-        const childN = n;
-        const a = commonSortChildrenWhenInferredAutoLayout(childN, localTailwindSettings2.optimizeLayout);
-        const b = a.filter((e) => e.visible);
-        b.forEach((e) => {
-          if (e.type == "TEXT") {
-            const c = e;
-            if (["$", "%"].includes(c.characters)) {
-              symbol = c.characters;
-            }
-          }
-        });
-      });
-      if (symbol == "%") {
-        endTag = `>
-  <template #suffix>
-    <span>${symbol}</span>
-  </template>
-</pacvue-input>`;
-      } else {
-        endTag = `>
-  <template #prefix>
-    <span>${symbol}</span>
-  </template>
-</pacvue-input>`;
-      }
-    }
-    return `
-<pacvue-input ${width} ${textarea}${endTag}`;
-  };
-  var pacvueIcon = (node) => {
-    let iconName = "PacvueIconAmazon";
-    if (node.name == "widget-arrow-down") {
-      iconName = "PacvueIconWidgetArrowDown1";
-    }
-    if (node.name == "widget-arrow-up") {
-      iconName = "PacvueIconWidgetArrowUp1";
-    }
-    if (node.name == "tips-exclamation") {
-      iconName = "PacvueIconTipsExclamation";
-      return `
-<pacvue-tooltip placement="top" effect="dark">
-  <template #content>
-    <div><!-- Tooltip\u6587\u6848 --></div>
-  </template>
-  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>
-</pacvue-tooltip>`;
-    }
-    return `
-<el-icon :size="${node.width}">
-  <${iconName} />
-</el-icon>`;
-  };
-  var isIcon = (node) => {
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible);
-    if (node.type == "INSTANCE" && visibleChildNode.length == 1 && visibleChildNode[0].type == "GROUP") {
-      const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode[0], localTailwindSettings2.optimizeLayout);
-      let index = 0;
-      grandChildrNode.forEach((e) => {
-        if (e.name == "Union") {
-          index++;
-        }
-      });
-      return index == 1;
-    }
-    return false;
-  };
-  var getIconName2 = (node) => {
-    let iconName = "";
-    const childrNode = commonSortChildrenWhenInferredAutoLayout(node, localTailwindSettings2.optimizeLayout);
-    const visibleChildNode = childrNode.filter((e) => e.visible);
-    const visibleChildNode0 = visibleChildNode[0];
-    const grandChildrNode = commonSortChildrenWhenInferredAutoLayout(visibleChildNode0, localTailwindSettings2.optimizeLayout);
-    grandChildrNode.forEach((e) => {
-      if (e.type == "RECTANGLE" && e.name != "Union") {
-        iconName = e.name;
-      }
-    });
-    return iconName;
-  };
   var pacvueContainer = (node) => {
     var ary = node.name.split("-");
     var comp = "";
     const width = node.width ? ` width="${node.width}px"` : "";
     switch (ary[0]) {
       case "PacvueSelect":
-        const labelInner = ary[1] ? ` :labelInner="'${ary[1]}'"` : "";
-        comp = `
-<${ary[0]}${width} ${labelInner} />`;
+        const labelInner = ary[1] ? ` labelInner="${ary[1]}"` : "";
+        comp = indentString(`
+<${ary[0]}${width}${labelInner} />`);
         break;
       case "PacvueInput":
         let endTag = " />";
+        let slotCont = "";
+        let slot = "";
         if (ary[1]) {
-          if (ary[1] == "Textarea") {
-            let rows = node.height ? ` :rows="${((node.height - 10) / 21).toFixed(0)}"` : "";
-            endTag = ' type="textarea"' + rows + "/>";
-          } else if (ary[1] == "Search") {
-            endTag = ` >
-  <template #${ary[2]}>
-    <el-icon><PacvueIconSearch /></el-icon>
-  </template>
+          switch (ary[1]) {
+            case "Textarea":
+              const rows = node.height ? ` :rows="${((node.height - 10) / 21).toFixed(0)}"` : "";
+              endTag = ` type="textarea"${rows}/>`;
+              break;
+            case "Search":
+              slotCont = indentString(`
+<el-icon><PacvueIconSearch /></el-icon>`);
+              slot = indentString(`
+<template #${ary[2]}>${slotCont}
+</template>`);
+              endTag = ` >
+${slot}</${ary[0]}>`;
+              break;
+            case "Selection":
+              if (ary[2]) {
+                const slotType = ary[2] == "%" ? "suffix" : "prefix";
+                slotCont = indentString(`
+<span>${ary[2]}</span>`);
+                slot = indentString(`
+<template #${slotType}>${slotCont}
+</template>`);
+              }
+              endTag = ` :inputWithSelection="true" :removeDuplication="true">${slot}
 </${ary[0]}>`;
-          } else if (ary[1] == "Selection") {
-            let slot = "";
-            if (ary[2]) {
-              const slotType = ary[2] == "%" ? "suffix" : "prefix";
-              slot = `
-  <template #${slotType}>
-    <span>${ary[2]}</span>
-  </template>
-`;
-            }
-            endTag = ` :inputWithSelection="true" :removeDuplication="true">${slot}</${ary[0]}>`;
-          } else if (ary[1] == "%") {
-            endTag = ` >
-  <template #suffix>
-    <span>${ary[1]}</span>
-  </template>
+              break;
+            case "%":
+              slotCont = indentString(`
+<span>${ary[1]}</span>`);
+              slot = indentString(`
+<template #suffix>${slotCont}
+</template>`);
+              endTag = ` >${slot}
 </${ary[0]}>`;
-          } else {
-            endTag = ` >
-  <template #prefix>
-    <span>${ary[1]}</span>
-  </template>
+              break;
+            default:
+              slotCont = indentString(`
+<span>${ary[1]}</span>`);
+              slot = indentString(`
+<template #prefix>${slotCont}
+</template>`);
+              endTag = ` >${slot}
 </${ary[0]}>`;
+              break;
           }
         }
         comp = `
 <${ary[0]}${width}${endTag}`;
         break;
       case "PacvueDatePicker":
+        const datetype = ary[1] ? ` type="${ary[1]}"` : "";
         comp = `
-<${ary[0]} type="${ary[1]}" />`;
+<${ary[0]}${datetype} />`;
         break;
       case "PacvueCheckbox":
       case "PacvueRadio":
@@ -2549,10 +2443,10 @@
         const line = text.split("\n");
         if (line.length > 6) {
           comp = `
-<${ary[0]} style="margin-right: 0"></${ary[0]}>${text}`;
+<${ary[0]} style="margin-right: 0"></${ary[0]}>${indentString(text)}`;
         } else {
           comp = `
-<${ary[0]} style="margin-right: 0">${text}
+<${ary[0]} style="margin-right: 0">${indentString(text)}
 </${ary[0]}>`;
         }
         break;
@@ -2563,7 +2457,7 @@
           const child = tailwindWidgetGenerator2(node.children, false);
           const flexStyle = tailwindAutoLayoutProps(nodeClone, nodeClone);
           html = `
-<div class="${flexStyle}">${child}
+<div class="${flexStyle}">${indentString(child)}
 </div>
 `;
         }
@@ -2578,7 +2472,7 @@
           }
         }
         comp = `
-<${ary[0]}${type}${size}>${html}</${ary[0]}>`;
+<${ary[0]}${type}${size}>${indentString(html)}</${ary[0]}>`;
         break;
       case "PacvueSwitch":
         comp = `
@@ -2592,7 +2486,7 @@
           build = builder.build(rowColumn);
         }
         comp = `
-<pacvue-radio-group ${build}>${tailwindWidgetGenerator2(node.children, false)}
+<pacvue-radio-group ${build}>${indentString(tailwindWidgetGenerator2(node.children, false))}
 </pacvue-radio-group>`;
         break;
       case "PacvueTab":
@@ -2603,41 +2497,45 @@
             return a.style.includes("border");
           })) {
             tabhtml += `
-  <pacvue-radio-button >${text2}</pacvue-radio-button>`;
+<pacvue-radio-button >${text2}</pacvue-radio-button>`;
             comp = `
-<pacvue-radio-group>${tabhtml}
+<pacvue-radio-group>${indentString(tabhtml)}
 </pacvue-radio-group>`;
           } else {
             tabhtml += `
-  <el-tab-pane label="${text2}"></el-tab-pane>`;
+<el-tab-pane label="${text2}"></el-tab-pane>`;
             comp = `
-<PacvueTab tab-position="top">${tabhtml}
+<PacvueTab tab-position="top">${indentString(tabhtml)}
 </PacvueTab>`;
           }
         });
         break;
       case "PacvueIcon":
         if (ary[1] == "PacvueIconTipsExclamation") {
-          return `
-<pacvue-tooltip placement="top" effect="dark">
-  <template #content>
-    <div><!-- Tooltip\u6587\u6848 --></div>
-  </template>
-  <el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>
+          const tooltipContent = indentString(`
+<template #content>${indentString(`
+<div><!-- Tooltip\u6587\u6848 --></div>`)}
+</template>`);
+          const tooltipComponent = `
+<pacvue-tooltip placement="top" effect="dark">${tooltipContent}
+<el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>
 </pacvue-tooltip>`;
+          comp = tooltipComponent;
         }
         comp = `
 <el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`;
         break;
       case "PacvueDropdown":
         const buildClass = node.style.join(" ");
-        comp = `
-<pacvue-dropdown>
-  <template #reference>
-<div class="${buildClass}">    ${tailwindWidgetGenerator2(node.children, false)}
-  </div>
-</template>
+        const dropdownReferenceTemplate = indentString(`
+<template #reference>${indentString(`
+<div class="${buildClass}">${indentString(tailwindWidgetGenerator2(node.children, false))}
+</div>`)}
+</template>`);
+        const dropdownComponent = `
+<pacvue-dropdown>${dropdownReferenceTemplate}
 </pacvue-dropdown>`;
+        comp = dropdownComponent;
         break;
       default:
         return "";
@@ -3458,7 +3356,7 @@
     let result = "";
     switch (settings.mode) {
       case "tailwind":
-        let array = tailwindMain1(convertedSelection, settings);
+        let array = pacvueMain(convertedSelection, settings);
         result = tailwindMain(array, settings);
         break;
       case "style":
