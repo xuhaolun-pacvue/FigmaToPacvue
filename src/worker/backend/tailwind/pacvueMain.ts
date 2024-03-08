@@ -70,15 +70,25 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 		ParentObj.type = 'PACVUE';
 		ParentObj.name = 'PacvueRadioGroup';
 		ParentObj.children = childrenList
+	} else if (isSmallSizedElement(node, childrenList)){
+		ParentObj.type = 'PACVUE';
+		const a: string = node.name;
+		let icon = (svgIcon as { [key: string]: string })[a.trim()];
+		ParentObj.name = `PacvueIcon-${icon}`;
 	} else if (isCustomButton(node, styleClass)){
 		/* 通过样式判断是否是选框 */
 		ParentObj.type = 'PACVUE';
 		if (node.height !== node.width) {
+			// 定义要排除的样式类数组
 			const excludedClasses = ['rounded-md', 'rounded', 'border', 'border-[var(--icon-disabled--)]', 'h-9', 'h-8'];
+			// 使用过滤器从 styleClass 中移除指定的样式类
 			const newClass = styleClass.filter(e => !excludedClasses.includes(e) && !e.includes('px') && !e.includes('py'));
-			const dateNum = searchByName(visibleChildNode, 0, 'Rectangle 1138')
-			const textLength = searchByType(visibleChildNode, 0, 'TEXT')
-			const textArr: string[] = textLength > 0 ? getChildrenAllText(visibleChildNode, []) : []
+			// 在 visibleChildNode 中搜索名称为 'Rectangle 1138' 的子节点，返回其位置索引
+			const dateNum = searchByName(visibleChildNode, 0, 'Rectangle 1138');
+			// 在 visibleChildNode 中搜索类型为 'TEXT' 的子节点数量
+			const textLength = searchByType(visibleChildNode, 0, 'TEXT');
+			// 如果存在 'TEXT' 类型的子节点，获取所有子节点的文本内容并存储在 textArr 数组中
+			const textArr: string[] = textLength > 0 ? getChildrenAllText(visibleChildNode, []) : [];
 			let name: string;
 			if (dateNum > 0) {
 				name = 'PacvueDatePicker';
@@ -163,11 +173,6 @@ const tailwindContainer = (node: SceneNode ): NodeObj =>{
 		ParentObj.type = 'PACVUE';
 		let type = node.name.includes('灰色按钮') ? '' : node.name.includes('次级按钮') ? 'plain' : 'primary';
 		ParentObj.name = `PacvueButton-${type}`;
-	} else if (isSmallSizedElement(node, childrenList)){
-		ParentObj.type = 'PACVUE';
-		const a: string = node.name;
-		let icon = (svgIcon as { [key: string]: string })[a.trim()];
-		ParentObj.name = `PacvueIcon-${icon}`;
 	}
 
 	const pacvueChildren = childrenList.filter(e=>e.type == 'PACVUE')
@@ -214,7 +219,7 @@ const isArrowBlock = (childrenList: any[], arrowNum: number): boolean => {
 
 const isCheckbox = (node: SceneNode): boolean => {
 	// 检查节点的高度和宽度是否相等且为18，或者节点的名称是否为 '多选框'
-	return (node.height == node.width && node.height == 18) || node.name == '多选框';
+	return (node.height == node.width && node.height == 18 && node.name != 'Union') || node.name == '多选框';
 }
 const isRadioButton = (node: SceneNode, styleClass: any[]): boolean => {
 	// 检查节点的高度和宽度是否相等且为20，同时样式类包含 'rounded-full'，或者节点的名称为 '单选框'
@@ -239,8 +244,8 @@ const isInputWithHeight = (node: SceneNode, childrenList: any[]): boolean => {
 const isTab = (node: SceneNode, childrenList: any[]): boolean => {
 	// 检查以下条件之一：
 	// 1. 节点的名称包含 'tab'
-	// 2. 子元素列表的长度大于1，同时第一个子元素的样式包含 'rounded-tl rounded-bl'，第二个子元素的样式包含 'rounded-tr rounded-br'
-	return node.name.includes('tab') || (childrenList.length > 1 && childrenList[0].style.includes('rounded-tl rounded-bl') && childrenList[1].style.includes('rounded-tr rounded-br'))
+	// 2. 子元素列表的长度大于1，同时第一个子元素的样式包含 'rounded-tl rounded-bl'，最后一个子元素的样式包含 'rounded-tr rounded-br'
+	return node.name.includes('tab') || (childrenList.length > 1 && childrenList[0].style.includes('rounded-tl rounded-bl') && childrenList[childrenList.length - 1].style.includes('rounded-tr rounded-br'))
 }
 const isPrimaryOrSecondaryButton = (node: SceneNode, styleClass: any[]): boolean => {
 	// 检查节点的名称是否包含 '主要按钮'
@@ -263,7 +268,12 @@ const isGrayButton = (node: SceneNode): boolean => {
 	return node.name.includes('灰色按钮') || node.name.toLocaleLowerCase().includes('button')
 }
 const isSmallSizedElement = (node: SceneNode, childrenList: any[]): boolean => {
-	return node.width == node.height && node.width < 26 && (node.type == 'INSTANCE' || childrenList.some(e=>e.name == 'Union'))
+	// 检查节点的宽度和高度是否相等，且宽度小于26，同时子元素列表中存在至少一个名为 'Union' 的元素
+	const isSquareWithUnion = (node.width == node.height && node.width < 26 && childrenList.some(e => e.name == 'Union'));
+	// 或者，检查子元素列表的长度是否为1，且唯一的子元素的名称为 'PacvueIcon-undefined'
+	const isSingleIconUndefined = (childrenList.length == 1 && childrenList[0].name == 'PacvueIcon-undefined');
+	// 返回一个布尔值，表示节点是否满足上述两种条件之一
+	return isSquareWithUnion || isSingleIconUndefined;
 }
 const getIconName = (visibleChildNode: any[]) => {
 	let icon = '-';

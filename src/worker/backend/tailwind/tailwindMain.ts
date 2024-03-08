@@ -309,11 +309,12 @@ const pacvueContainer = (node:any): string=>{
 			break
 		case 'PacvueIcon':
 			if(ary[1] == 'PacvueIconTipsExclamation'){
-				const tooltipContent = indentString(`\n<template #content>${indentString(`\n<div><!-- Tooltip文案 --></div>`)}\n</template>`);
-				const tooltipComponent = `\n<pacvue-tooltip placement="top" effect="dark">${tooltipContent}\n<el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>\n</pacvue-tooltip>`;	
+				const tooltipContent = indentString(`\n<template #content>${indentString(`\n<div><!-- Tooltip文案 --></div>`)}\n</template>\n<el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>`);
+				const tooltipComponent = `\n<pacvue-tooltip placement="top" effect="dark">${tooltipContent}\n</pacvue-tooltip>`;	
 				comp = tooltipComponent;
+			} else {
+			 comp = `\n<el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`
 			}
-			comp = `\n<el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`
 			break
 		case 'PacvueDropdown':
 			const buildClass = node.style.join(" ")

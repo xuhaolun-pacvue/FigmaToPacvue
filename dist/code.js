@@ -1938,6 +1938,11 @@
       ParentObj.type = "PACVUE";
       ParentObj.name = "PacvueRadioGroup";
       ParentObj.children = childrenList;
+    } else if (isSmallSizedElement(node, childrenList)) {
+      ParentObj.type = "PACVUE";
+      const a = node.name;
+      let icon = svgIcon[a.trim()];
+      ParentObj.name = `PacvueIcon-${icon}`;
     } else if (isCustomButton(node, styleClass)) {
       ParentObj.type = "PACVUE";
       if (node.height !== node.width) {
@@ -2029,11 +2034,6 @@
       ParentObj.type = "PACVUE";
       let type = node.name.includes("\u7070\u8272\u6309\u94AE") ? "" : node.name.includes("\u6B21\u7EA7\u6309\u94AE") ? "plain" : "primary";
       ParentObj.name = `PacvueButton-${type}`;
-    } else if (isSmallSizedElement(node, childrenList)) {
-      ParentObj.type = "PACVUE";
-      const a = node.name;
-      let icon = svgIcon[a.trim()];
-      ParentObj.name = `PacvueIcon-${icon}`;
     }
     const pacvueChildren = childrenList.filter((e) => e.type == "PACVUE");
     const conditions = ["bg-", "border-", "grow", "px-", "py-", "pt-", "pr-", "pb-", "pl-", "p-"];
@@ -2065,7 +2065,7 @@
     return hasTwoChildren && isFirstChildRounded && isSecondChildRounded && isArrowNumOne;
   };
   var isCheckbox = (node) => {
-    return node.height == node.width && node.height == 18 || node.name == "\u591A\u9009\u6846";
+    return node.height == node.width && node.height == 18 && node.name != "Union" || node.name == "\u591A\u9009\u6846";
   };
   var isRadioButton = (node, styleClass) => {
     return node.height == node.width && node.height == 20 && styleClass.includes("rounded-full") || node.name == "\u5355\u9009\u6846";
@@ -2086,7 +2086,7 @@
     return childrenList.length == 1 && childrenList[0].name == "Input" && node.height >= 40;
   };
   var isTab = (node, childrenList) => {
-    return node.name.includes("tab") || childrenList.length > 1 && childrenList[0].style.includes("rounded-tl rounded-bl") && childrenList[1].style.includes("rounded-tr rounded-br");
+    return node.name.includes("tab") || childrenList.length > 1 && childrenList[0].style.includes("rounded-tl rounded-bl") && childrenList[childrenList.length - 1].style.includes("rounded-tr rounded-br");
   };
   var isPrimaryOrSecondaryButton = (node, styleClass) => {
     const isMainButton = node.name.includes("\u4E3B\u8981\u6309\u94AE");
@@ -2101,7 +2101,9 @@
     return node.name.includes("\u7070\u8272\u6309\u94AE") || node.name.toLocaleLowerCase().includes("button");
   };
   var isSmallSizedElement = (node, childrenList) => {
-    return node.width == node.height && node.width < 26 && (node.type == "INSTANCE" || childrenList.some((e) => e.name == "Union"));
+    const isSquareWithUnion = node.width == node.height && node.width < 26 && childrenList.some((e) => e.name == "Union");
+    const isSingleIconUndefined = childrenList.length == 1 && childrenList[0].name == "PacvueIcon-undefined";
+    return isSquareWithUnion || isSingleIconUndefined;
   };
   var getIconName = (visibleChildNode) => {
     let icon = "-";
@@ -2515,15 +2517,16 @@ ${slot}</${ary[0]}>`;
           const tooltipContent = indentString(`
 <template #content>${indentString(`
 <div><!-- Tooltip\u6587\u6848 --></div>`)}
-</template>`);
+</template>
+<el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>`);
           const tooltipComponent = `
 <pacvue-tooltip placement="top" effect="dark">${tooltipContent}
-<el-icon :size="${node.width}" color="#b2b2b8"><PacvueIconTipsExclamation /></el-icon>
 </pacvue-tooltip>`;
           comp = tooltipComponent;
-        }
-        comp = `
+        } else {
+          comp = `
 <el-icon :size="20"><${ary[1]}></${ary[1]}></el-icon>`;
+        }
         break;
       case "PacvueDropdown":
         const buildClass = node.style.join(" ");
